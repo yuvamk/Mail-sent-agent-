@@ -81,7 +81,7 @@ export default function SignupPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Yuvam Kumar"
+              placeholder="e.g. Alex Smith"
               id="input-signup-name"
               className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
             />
@@ -96,7 +96,7 @@ export default function SignupPage() {
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="8650825573"
+              placeholder="e.g. +91 9876543210"
               id="input-signup-phone"
               className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
             />

@@ -234,7 +234,7 @@ Output ONLY valid JSON with keys "subject" and "body".`);
                   type="text"
                   value={candidateName}
                   onChange={(e) => setCandidateName(e.target.value)}
-                  placeholder="Yuvam Kumar"
+                  placeholder="e.g. Alex Smith"
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -245,7 +245,7 @@ Output ONLY valid JSON with keys "subject" and "body".`);
                   type="text"
                   value={candidatePhone}
                   onChange={(e) => setCandidatePhone(e.target.value)}
-                  placeholder="8650825573"
+                  placeholder="e.g. +91 9876543210"
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -256,7 +256,7 @@ Output ONLY valid JSON with keys "subject" and "body".`);
                   type="text"
                   value={githubUrl}
                   onChange={(e) => setGithubUrl(e.target.value)}
-                  placeholder="https://github.com/yuvamk"
+                  placeholder="https://github.com/yourusername"
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 font-mono text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -267,7 +267,7 @@ Output ONLY valid JSON with keys "subject" and "body".`);
                   type="text"
                   value={linkedinUrl}
                   onChange={(e) => setLinkedinUrl(e.target.value)}
-                  placeholder="https://www.linkedin.com/in/yuvam-kumar-637712227"
+                  placeholder="https://www.linkedin.com/in/yourusername"
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 font-mono text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
