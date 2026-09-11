@@ -15,11 +15,13 @@ export default function SignupPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setAlreadyRegistered(false);
 
     try {
       // 1. Call server API to create auto-confirmed user (NO email check needed!)
@@ -36,18 +38,21 @@ export default function SignupPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.alreadyRegistered || data.error?.toLowerCase().includes('already been registered')) {
+          setAlreadyRegistered(true);
+        }
         throw new Error(data.error || 'Failed to create account');
       }
 
       // 2. Automatically log the user in immediately!
       const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
       if (loginError) {
-        // Fallback: redirect to login
-        router.push('/login');
+        // Fallback: redirect to login page with prefilled email
+        router.push(`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`);
       } else {
         router.push('/leads');
       }
@@ -154,9 +159,21 @@ export default function SignupPage() {
           </div>
 
           {error && (
-            <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-800 text-red-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-              <span>{error}</span>
+            <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                <span className="leading-snug">{error}</span>
+              </div>
+              {alreadyRegistered && (
+                <div className="pt-1">
+                  <Link
+                    href={`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`}
+                    className="inline-flex items-center justify-center w-full py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-colors"
+                  >
+                    Go to Sign In Page Now
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 

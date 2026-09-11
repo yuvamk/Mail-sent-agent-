@@ -11,11 +11,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
     const supabase = createAdminClient();
 
-    // Create user with email_confirm: true so NO verification email is sent/required
+    let newUser = null;
+
+    // 1. Try creating user via admin API with email_confirm: true (bypasses email confirmation links)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
+      email: cleanEmail,
       password,
       email_confirm: true,
       user_metadata: {
@@ -25,21 +28,75 @@ export async function POST(req: NextRequest) {
     });
 
     if (authError) {
-      console.error('Admin signup error:', authError);
-      return NextResponse.json({ error: authError.message }, { status: 400 });
+      const isAlreadyRegistered =
+        authError.message?.toLowerCase().includes('already been registered') ||
+        authError.message?.toLowerCase().includes('email_exists') ||
+        (authError as any).code === 'email_exists' ||
+        (authError as any).status === 422;
+
+      if (isAlreadyRegistered) {
+        return NextResponse.json(
+          {
+            alreadyRegistered: true,
+            error: 'An account with this email address has already been registered. Please click "Sign in here" below to log in.',
+          },
+          { status: 400 }
+        );
+      }
+
+      // 2. Fallback: If admin.createUser hits a database error trigger, attempt standard signUp
+      if (authError.message?.toLowerCase().includes('database error')) {
+        console.warn('Admin createUser database trigger error. Attempting fallback auth.signUp...');
+        const { data: fallbackData, error: fallbackError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            data: {
+              candidate_name: name || '',
+              candidate_phone: phone || '',
+            },
+          },
+        });
+
+        if (fallbackError) {
+          const isFallbackRegistered =
+            fallbackError.message?.toLowerCase().includes('already been registered') ||
+            (fallbackError as any).code === 'email_exists' ||
+            (fallbackError as any).status === 422;
+
+          if (isFallbackRegistered) {
+            return NextResponse.json(
+              {
+                alreadyRegistered: true,
+                error: 'An account with this email address has already been registered. Please click "Sign in here" below to log in.',
+              },
+              { status: 400 }
+            );
+          }
+          return NextResponse.json({ error: fallbackError.message }, { status: 400 });
+        }
+
+        newUser = fallbackData.user;
+      } else {
+        return NextResponse.json({ error: authError.message }, { status: 400 });
+      }
+    } else {
+      newUser = authData.user;
     }
 
-    const newUser = authData.user;
-
     if (newUser) {
-      // Initialize user_settings entry in Postgres
-      await supabase.from('user_settings').upsert({
-        user_id: newUser.id,
-        candidate_name: name || '',
-        candidate_phone: phone || '',
-        custom_system_prompt: DEFAULT_SYSTEM_PROMPT,
-        updated_at: new Date().toISOString(),
-      });
+      try {
+        // Initialize user_settings entry in Postgres
+        await supabase.from('user_settings').upsert({
+          user_id: newUser.id,
+          candidate_name: name || '',
+          candidate_phone: phone || '',
+          custom_system_prompt: DEFAULT_SYSTEM_PROMPT,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (dbErr) {
+        console.warn('Error setting up initial user_settings row:', dbErr);
+      }
     }
 
     return NextResponse.json({
@@ -51,3 +108,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error?.message || 'Failed to create account' }, { status: 500 });
   }
 }
+
