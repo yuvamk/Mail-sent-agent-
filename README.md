@@ -52,34 +52,20 @@ It features **100% Dynamic Per-User Settings**, **Schema-Less Excel Parsing**, *
 
 ---
 
-## 🛠️ Environment Variables Setup
+## 🛠️ Minimal Environment Setup (Render / Production)
 
-Create a `.env.local` file in your root directory:
+Because **ReachOut AI** is 100% dynamic and multi-tenant, **you DO NOT need to configure AI API keys or SMTP passwords in server environment variables**. Every user enters their own keys in their private Settings UI, which are stored securely in Postgres.
+
+Only the Supabase connection keys are required in `.env.local` or Render environment settings:
 
 ```env
-# Supabase Configuration
+# Required Supabase Database & Auth Keys ONLY
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-
-# AI API Keys (System Default Fallbacks)
-ANTHROPIC_API_KEY=sk-ant-api03-...
-GEMINI_API_KEY=AIzaSy...
-GROQ_API_KEY=gsk_...
-
-# SMTP Relay (Brevo / Gmail)
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=your-smtp-username
-SMTP_PASS=your-smtp-password
-SMTP_FROM_EMAIL=your-email@gmail.com
-
-# Candidate Signature Defaults
-MY_NAME=Your Name
-MY_PHONE=1234567890
-MY_GITHUB=https://github.com/yourusername
-MY_LINKEDIN=https://linkedin.com/in/yourusername
 ```
+
+> **Note**: `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, and `SMTP_*` credentials are entered dynamically by each user in the app at `/settings` and stored in Supabase Postgres.
 
 ---
 
@@ -122,7 +108,7 @@ create table if not exists user_settings (
   candidate_name text,
   candidate_phone text,
   github_url text,
-  linkedin_url text,
+  linkedinUrl text,
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 
@@ -139,12 +125,9 @@ To host **ReachOut AI** live on **Render**:
 
 1. **Push Code to GitHub**:
    ```bash
-   git init
    git add .
-   git commit -m "Deploy ReachOut AI Multi-Tenant Platform"
-   git branch -M main
-   git remote add origin https://github.com/yuvamk/Mail-sent-agent-.git
-   git push -u origin main
+   git commit -m "Configure 100% dynamic DB credentials for Render"
+   git push origin main
    ```
 
 2. **Create Web Service on Render**:
@@ -157,18 +140,14 @@ To host **ReachOut AI** live on **Render**:
    - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npm start`
 
-4. **Add Environment Variables**:
-   In Render's **Environment** tab, add:
+4. **Add Environment Variables (Only 3 Supabase Keys Needed)**:
+   In Render's **Environment** tab, add ONLY:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
-   - `ANTHROPIC_API_KEY`
-   - `GROQ_API_KEY`
-   - `GEMINI_API_KEY`
-   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`
 
 5. **Deploy**:
-   Click **Create Web Service**. Render will automatically build and publish your live application!
+   Click **Create Web Service**. Render will build and deploy your app! Each user who logs in will enter their own Groq/Claude/Gemini API keys and SMTP credentials dynamically in `/settings`.
 
 ---
 
