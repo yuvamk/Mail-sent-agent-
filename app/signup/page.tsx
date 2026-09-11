@@ -4,36 +4,52 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase-browser';
-import { Sparkles, Mail, Lock, UserPlus, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Mail, Lock, User, Phone, UserPlus, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccessMsg(null);
 
     try {
-      const { data, error: authError } = await supabaseBrowser.auth.signUp({
+      // 1. Call server API to create auto-confirmed user (NO email check needed!)
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create account');
+      }
+
+      // 2. Automatically log the user in immediately!
+      const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) {
-        throw authError;
-      }
-
-      if (data.session) {
-        router.push('/leads');
+      if (loginError) {
+        // Fallback: redirect to login
+        router.push('/login');
       } else {
-        setSuccessMsg('Account created successfully! Please check your email to confirm registration or sign in.');
+        router.push('/leads');
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to create account. Please try again.');
@@ -56,6 +72,36 @@ export default function SignupPage() {
 
         {/* Signup Form */}
         <form onSubmit={handleSignup} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-cyan-400" /> Full Name (Signature)
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Yuvam Kumar"
+              id="input-signup-name"
+              className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-cyan-400" /> Phone Number
+            </label>
+            <input
+              type="text"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="8650825573"
+              id="input-signup-phone"
+              className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
+            />
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-cyan-400" /> Email Address
@@ -114,20 +160,13 @@ export default function SignupPage() {
             </div>
           )}
 
-          {successMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
           <button
             type="submit"
             disabled={loading}
             id="btn-submit-signup"
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />} Create Private Account
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />} Create Account & Launch Workspace
           </button>
         </form>
 

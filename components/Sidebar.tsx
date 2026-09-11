@@ -54,6 +54,11 @@ export default function Sidebar() {
     router.push('/login');
   };
 
+  // Hide sidebar completely on Landing page, Login page, and Signup page
+  if (pathname === '/' || pathname === '/login' || pathname === '/signup') {
+    return null;
+  }
+
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between h-screen sticky top-0 text-slate-100 z-30">
       <div>
