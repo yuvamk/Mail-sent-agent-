@@ -44,41 +44,46 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // 2. Fallback: If admin.createUser hits a database error trigger, attempt standard signUp
-      if (authError.message?.toLowerCase().includes('database error')) {
-        console.warn('Admin createUser database trigger error. Attempting fallback auth.signUp...');
-        const { data: fallbackData, error: fallbackError } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: {
-              candidate_name: name || '',
-              candidate_phone: phone || '',
-            },
+      // 2. Fallback: Standard signUp if admin createUser encounters environment/key limitations
+      console.warn('Admin createUser notice:', authError.message, '- Executing fallback auth.signUp...');
+      const { data: fallbackData, error: fallbackError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            candidate_name: name || '',
+            candidate_phone: phone || '',
           },
-        });
+        },
+      });
 
-        if (fallbackError) {
-          const isFallbackRegistered =
-            fallbackError.message?.toLowerCase().includes('already been registered') ||
-            (fallbackError as any).code === 'email_exists' ||
-            (fallbackError as any).status === 422;
+      if (fallbackError) {
+        const isFallbackRegistered =
+          fallbackError.message?.toLowerCase().includes('already been registered') ||
+          (fallbackError as any).code === 'email_exists' ||
+          (fallbackError as any).status === 422;
 
-          if (isFallbackRegistered) {
-            return NextResponse.json(
-              {
-                alreadyRegistered: true,
-                error: 'An account with this email address has already been registered. Please click "Sign in here" below to log in.',
-              },
-              { status: 400 }
-            );
-          }
-          return NextResponse.json({ error: fallbackError.message }, { status: 400 });
+        if (isFallbackRegistered) {
+          return NextResponse.json(
+            {
+              alreadyRegistered: true,
+              error: 'An account with this email address has already been registered. Please click "Sign in here" below to log in.',
+            },
+            { status: 400 }
+          );
         }
+        return NextResponse.json({ error: fallbackError.message }, { status: 400 });
+      }
 
-        newUser = fallbackData.user;
-      } else {
-        return NextResponse.json({ error: authError.message }, { status: 400 });
+      newUser = fallbackData.user;
+
+      // Attempt to auto-confirm fallback user if possible
+      if (newUser?.id) {
+        try {
+          await supabase.auth.admin.updateUserById(newUser.id, { email_confirm: true });
+        } catch (_) {
+          // ignore if service role key is absent
+        }
       }
     } else {
       newUser = authData.user;
