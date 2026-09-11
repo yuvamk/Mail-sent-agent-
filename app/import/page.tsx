@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   FileSpreadsheet,
   Upload,
@@ -43,6 +45,15 @@ interface ImportSummary {
 }
 
 export default function ImportPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push('/login');
+      }
+    });
+  }, [router]);
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<'upload' | 'preview' | 'result'>('upload');
   const [analyzing, setAnalyzing] = useState(false);

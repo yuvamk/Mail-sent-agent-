@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const userId = await getUserIdFromRequest(req);
 
     const supabase = createAdminClient();
 
@@ -12,7 +11,7 @@ export async function GET(req: NextRequest) {
     const { data: usersCountData } = await supabase.from('user_settings').select('user_id', { count: 'exact' });
     const totalUsers = Math.max(1, usersCountData?.length || 1);
 
-    // 2. Fetch usage logs
+    // 2. Fetch usage logs for current user
     let query = supabase
       .from('api_usage_logs')
       .select('*, leads(company, email)')
@@ -20,6 +19,8 @@ export async function GET(req: NextRequest) {
 
     if (userId) {
       query = query.eq('user_id', userId);
+    } else {
+      query = query.eq('user_id', '00000000-0000-0000-0000-000000000000');
     }
 
     const { data: logs, error } = await query;

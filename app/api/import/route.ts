@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { previewExcelFile, processExcelFileWithMapping, ColumnMapping } from '@/lib/excel';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,12 +44,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 });
+    }
+
     const supabase = createAdminClient();
 
-    // Deduplicate against existing database records by (company, email)
+    // Deduplicate against existing database records for THIS user by (company, email)
     const { data: existingLeads } = await supabase
       .from('leads')
       .select('company, email')
+      .eq('user_id', userId)
       .not('email', 'is', null);
 
     const existingSet = new Set(
@@ -68,7 +74,10 @@ export async function POST(req: NextRequest) {
         }
         existingSet.add(key);
       }
-      toInsert.push(lead);
+      toInsert.push({
+        ...lead,
+        user_id: userId,
+      });
     }
 
     let insertedCount = 0;

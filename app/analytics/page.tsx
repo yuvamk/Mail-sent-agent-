@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   BarChart3,
   Users,
@@ -14,6 +16,10 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
+  DollarSign,
+  Calendar,
+  Layers,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface TokenMetrics {
@@ -51,13 +57,23 @@ interface LogEntry {
 }
 
 export default function AnalyticsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<TokenMetrics | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch('/api/analytics');
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      const res = await fetch(`/api/analytics?userId=${session.user.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
       if (res.ok) {
         const data = await res.json();
         setMetrics(data.metrics);
@@ -72,7 +88,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [router]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">

@@ -1,14 +1,22 @@
-import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(req);
+
+    if (!userId) {
+      // Unauthenticated guest sees zero leads
+      return NextResponse.json({ leads: [] });
+    }
+
     const supabase = createAdminClient();
 
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('*, email_drafts(id, status, ai_provider)')
-      .order('imported_at', { ascending: false });
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
     if (leadsError) {
       return NextResponse.json({ error: leadsError.message }, { status: 500 });

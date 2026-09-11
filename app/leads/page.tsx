@@ -1,22 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   Users,
   Search,
   Filter,
-  Sparkles,
-  ExternalLink,
-  CheckCircle2,
-  Mail,
-  Loader2,
   CheckSquare,
   Square,
+  Sparkles,
   Bot,
-  AlertTriangle,
+  Mail,
+  ExternalLink,
+  ChevronRight,
+  Loader2,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Send,
+  Zap,
   Briefcase,
+  AlertTriangle,
 } from 'lucide-react';
-import Link from 'next/link';
 
 interface Lead {
   id: string;
@@ -35,6 +43,7 @@ interface Lead {
 }
 
 export default function LeadsPage() {
+  const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -51,7 +60,18 @@ export default function LeadsPage() {
 
   const fetchLeads = async () => {
     try {
-      const res = await fetch('/api/leads');
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      const res = await fetch(`/api/leads?userId=${session.user.id}`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
       if (res.ok) {
         const data = await res.json();
         setLeads(data.leads || []);
@@ -117,13 +137,19 @@ export default function LeadsPage() {
     setGenResult(null);
 
     try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+
       const res = await fetch('/api/drafts/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
         body: JSON.stringify({
           leadIds: selectedIds,
           provider: aiProvider,
           groqModel,
+          userId: session?.user?.id,
         }),
       });
 

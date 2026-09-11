@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   MailCheck,
   Send,
@@ -48,6 +50,7 @@ interface Draft {
 }
 
 export default function DraftReviewPage() {
+  const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
@@ -62,7 +65,16 @@ export default function DraftReviewPage() {
 
   const fetchDrafts = async (autoSelectId?: string) => {
     try {
-      const res = await fetch('/api/drafts');
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      const res = await fetch(`/api/drafts?userId=${session.user.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
       if (res.ok) {
         const data = await res.json();
         const list: Draft[] = data.drafts || [];
@@ -210,10 +222,15 @@ export default function DraftReviewPage() {
     setAlert(null);
 
     try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+
       const res = await fetch('/api/drafts/send-all', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ userId: session?.user?.id }),
       });
 
       const data = await res.json();

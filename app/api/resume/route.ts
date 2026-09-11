@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractTextFromPdf } from '@/lib/pdf';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ resumes: [] });
+    }
+
     const supabase = createAdminClient();
     const { data: resumes, error } = await supabase
       .from('resumes')
       .select('*')
+      .eq('user_id', userId)
       .order('uploaded_at', { ascending: false });
 
     if (error) {
@@ -22,6 +28,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
@@ -54,16 +65,20 @@ export async function POST(req: NextRequest) {
 
     if (storageError) {
       console.error('Supabase storage upload error:', storageError);
-      // Fallback: continue even if storage bucket isn't initialized yet
     }
 
-    // 3. Mark existing active resumes as false
-    await supabase.from('resumes').update({ is_active: false }).eq('is_active', true);
+    // 3. Mark existing active resumes for THIS user as false
+    await supabase
+      .from('resumes')
+      .update({ is_active: false })
+      .eq('user_id', userId)
+      .eq('is_active', true);
 
     // 4. Insert new resume record
     const { data: newResume, error: dbError } = await supabase
       .from('resumes')
       .insert({
+        user_id: userId,
         file_name: file.name,
         storage_path: storagePath,
         extracted_text: extractedText,
@@ -88,6 +103,11 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { resumeId } = body;
 
@@ -97,14 +117,18 @@ export async function PATCH(req: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Set all inactive
-    await supabase.from('resumes').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+    // Set all inactive for user
+    await supabase
+      .from('resumes')
+      .update({ is_active: false })
+      .eq('user_id', userId);
 
-    // Set target active
+    // Set target active for user
     const { data, error } = await supabase
       .from('resumes')
       .update({ is_active: true })
       .eq('id', resumeId)
+      .eq('user_id', userId)
       .select('*')
       .single();
 

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 import { Send, CheckCircle2, AlertTriangle, RefreshCw, Mail, Calendar, Loader2, Eye, Building } from 'lucide-react';
 
 interface SentRecord {
@@ -21,6 +23,7 @@ interface SentRecord {
 }
 
 export default function SentHistoryPage() {
+  const router = useRouter();
   const [records, setRecords] = useState<SentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeModalRecord, setActiveModalRecord] = useState<SentRecord | null>(null);
@@ -28,7 +31,16 @@ export default function SentHistoryPage() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch('/api/drafts');
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      const res = await fetch(`/api/drafts?userId=${session.user.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
       if (res.ok) {
         const data = await res.json();
         const allDrafts: SentRecord[] = data.drafts || [];
@@ -45,7 +57,7 @@ export default function SentHistoryPage() {
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [router]);
 
   const handleRetrySend = async (record: SentRecord) => {
     setRetryingId(record.id);

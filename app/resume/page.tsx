@@ -1,30 +1,55 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Upload, CheckCircle2, AlertCircle, Loader2, Sparkles, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
+import {
+  FileText,
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  FileCheck,
+  Loader2,
+  Trash2,
+  Eye,
+  FileUp,
+  Sparkles,
+  Star,
+} from 'lucide-react';
 
-interface Resume {
+interface ResumeRecord {
   id: string;
   file_name: string;
   storage_path: string;
   extracted_text: string | null;
-  uploaded_at: string;
   is_active: boolean;
+  uploaded_at: string;
 }
 
 export default function ResumePage() {
-  const [resumes, setResumes] = useState<Resume[]>([]);
+  const router = useRouter();
+  const [resumes, setResumes] = useState<ResumeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeTextPreview, setActiveTextPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const fetchResumes = async () => {
     try {
-      const res = await fetch('/api/resume');
-      const data = await res.json();
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      const res = await fetch(`/api/resume?userId=${session.user.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
       if (res.ok) {
+        const data = await res.json();
         setResumes(data.resumes || []);
       }
     } catch (e) {
@@ -49,8 +74,13 @@ export default function ResumePage() {
     formData.append('file', selectedFile);
 
     try {
-      const res = await fetch('/api/resume', {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+
+      const res = await fetch(`/api/resume?userId=${session?.user?.id || ''}`, {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
         body: formData,
       });
 

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   Settings,
   Save,
@@ -19,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
@@ -46,7 +49,16 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const res = await fetch('/api/settings');
+        const { data: { session } } = await supabaseBrowser.auth.getSession();
+        if (!session) {
+          router.push('/login');
+          return;
+        }
+
+        const res = await fetch(`/api/settings?userId=${session.user.id}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+
         if (res.ok) {
           const data = await res.json();
           const s = data.settings || {};
@@ -59,7 +71,7 @@ export default function SettingsPage() {
           setAnthropicKey(s.ANTHROPIC_API_KEY || '');
           setGeminiKey(s.GEMINI_API_KEY || '');
           setGroqKey(s.GROQ_API_KEY || '');
-          setSmtpHost(s.SMTP_HOST || 'smtp-relay.brevo.com');
+          setSmtpHost(s.SMTP_HOST || '');
           setSmtpPort(s.SMTP_PORT || '587');
           setSmtpUser(s.SMTP_USER || '');
           setSmtpPass(s.SMTP_PASS || '');
@@ -72,17 +84,23 @@ export default function SettingsPage() {
       }
     }
     loadSettings();
-  }, []);
+  }, [router]);
 
   const handleSave = async () => {
     setSaving(true);
     setMessage(null);
 
     try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+
       const res = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
         body: JSON.stringify({
+          userId: session?.user?.id,
           CUSTOM_SYSTEM_PROMPT: customPrompt,
           MY_NAME: candidateName,
           MY_PHONE: candidatePhone,

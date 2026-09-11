@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
 import { getUserCredentials, DEFAULT_SYSTEM_PROMPT } from '@/lib/user-credentials';
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({
+        settings: {
+          CUSTOM_SYSTEM_PROMPT: DEFAULT_SYSTEM_PROMPT,
+          ANTHROPIC_API_KEY: '',
+          GEMINI_API_KEY: '',
+          GROQ_API_KEY: '',
+          SMTP_HOST: '',
+          SMTP_PORT: '587',
+          SMTP_USER: '',
+          SMTP_PASS: '',
+          SMTP_FROM_EMAIL: '',
+          MY_NAME: '',
+          MY_PHONE: '',
+          MY_GITHUB: '',
+          MY_LINKEDIN: '',
+          DEFAULT_PROMPT_TEMPLATE: DEFAULT_SYSTEM_PROMPT,
+        },
+      });
+    }
 
     const creds = await getUserCredentials(userId);
 
@@ -34,13 +53,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 });
+    }
+
     const body = await req.json();
-    const { userId, ...fields } = body;
+    const { ...fields } = body;
 
     const supabase = createAdminClient();
 
     const payload = {
-      user_id: userId || '00000000-0000-0000-0000-000000000000',
+      user_id: userId,
       custom_system_prompt: fields.CUSTOM_SYSTEM_PROMPT,
       anthropic_api_key: fields.ANTHROPIC_API_KEY,
       gemini_api_key: fields.GEMINI_API_KEY,
