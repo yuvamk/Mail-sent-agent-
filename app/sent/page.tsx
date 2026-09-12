@@ -44,8 +44,8 @@ export default function SentHistoryPage() {
       if (res.ok) {
         const data = await res.json();
         const allDrafts: SentRecord[] = data.drafts || [];
-        // Filter sent and failed records
-        const historyList = allDrafts.filter((d) => d.status === 'sent' || d.status === 'failed');
+        // Filter sent, replied, and failed records
+        const historyList = allDrafts.filter((d) => d.status === 'sent' || d.status === 'failed' || d.status === 'replied');
         setRecords(historyList);
       }
     } catch (e) {
@@ -100,6 +100,7 @@ export default function SentHistoryPage() {
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
               <tr>
+                <th className="p-4 w-12 text-center text-slate-500 font-mono">#</th>
                 <th className="p-4">Recipient & Company</th>
                 <th className="p-4">Subject Line</th>
                 <th className="p-4">AI Model</th>
@@ -111,20 +112,23 @@ export default function SentHistoryPage() {
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400">
+                  <td colSpan={7} className="p-8 text-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin text-emerald-400 mx-auto mb-2" />
                     Loading audit history...
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-500 italic">
+                  <td colSpan={7} className="p-8 text-center text-slate-500 italic">
                     No emails dispatched yet. Approved emails will appear here.
                   </td>
                 </tr>
               ) : (
-                records.map((r) => (
+                records.map((r, index) => (
                   <tr key={r.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="p-4 text-center font-mono text-slate-500 text-xs font-semibold">
+                      #{index + 1}
+                    </td>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{r.leads?.company || 'Company'}</p>
                       <p className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
@@ -141,7 +145,11 @@ export default function SentHistoryPage() {
                     <td className="p-4 font-mono text-indigo-300 uppercase">{r.ai_provider}</td>
 
                     <td className="p-4">
-                      {r.status === 'sent' ? (
+                      {r.status === 'replied' ? (
+                        <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold flex items-center gap-1 w-max">
+                          <Mail className="w-3 h-3 text-cyan-400" /> Replied
+                        </span>
+                      ) : r.status === 'sent' ? (
                         <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold flex items-center gap-1 w-max">
                           <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Sent
                         </span>

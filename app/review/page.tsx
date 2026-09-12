@@ -20,6 +20,11 @@ import {
   Sparkles,
   Bot,
   ShieldAlert,
+  MessageSquare,
+  Clock,
+  RotateCcw,
+  Check,
+  Calendar,
 } from 'lucide-react';
 
 interface Draft {
@@ -29,12 +34,13 @@ interface Draft {
   ai_provider: string;
   subject: string;
   body: string;
-  status: string; // drafted | reviewed | approved | sent | failed
+  status: string; // drafted | reviewed | approved | sent | replied | failed
   edited_by_user: boolean;
   error_message: string | null;
   created_at: string;
   sent_at: string | null;
   leads: {
+    id: string;
     company: string;
     location: string | null;
     salary: string | null;
@@ -42,7 +48,7 @@ interface Draft {
     key_skills: string | null;
     email: string | null;
     contact_number: string | null;
-    raw_data?: Record<string, string> | null;
+    raw_data?: Record<string, any> | null;
   };
   resumes: {
     file_name: string;
@@ -55,13 +61,23 @@ export default function DraftReviewPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
 
+  // Tab Filtering: 'pending' | 'sent' | 'replied' | 'failed' | 'all'
+  const [activeTab, setActiveTab] = useState<'pending' | 'sent' | 'replied' | 'failed' | 'all'>('pending');
+
   // Form State
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Record Reply Modal State
+  const [replyModalOpen, setReplyModalOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replyNotes, setReplyNotes] = useState('');
+  const [savingReply, setSavingReply] = useState(false);
 
   const fetchDrafts = async (autoSelectId?: string) => {
     try {
@@ -104,6 +120,24 @@ export default function DraftReviewPage() {
   }, []);
 
   const activeDraft = drafts.find((d) => d.id === selectedDraftId);
+
+  // Filter drafts based on active tab
+  const draftsPending = drafts.filter(
+    (d) => d.status === 'drafted' || d.status === 'reviewed' || d.status === 'approved'
+  );
+  const draftsSent = drafts.filter((d) => d.status === 'sent');
+  const draftsReplied = drafts.filter((d) => d.status === 'replied');
+  const draftsFailed = drafts.filter((d) => d.status === 'failed');
+
+  const visibleDrafts = drafts.filter((d) => {
+    if (activeTab === 'pending') {
+      return d.status === 'drafted' || d.status === 'reviewed' || d.status === 'approved';
+    }
+    if (activeTab === 'sent') return d.status === 'sent';
+    if (activeTab === 'replied') return d.status === 'replied';
+    if (activeTab === 'failed') return d.status === 'failed';
+    return true;
+  });
 
   const handleSelectDraft = (d: Draft) => {
     setSelectedDraftId(d.id);
@@ -210,18 +244,13 @@ export default function DraftReviewPage() {
     }
   };
 
-  const [sendingAll, setSendingAll] = useState(false);
-
   const handleSendAll = async () => {
-    const pendingDrafts = drafts.filter((d) => d.status !== 'sent');
-    if (pendingDrafts.length === 0) {
-      setAlert({ type: 'error', message: 'No unsent drafts currently available in queue.' });
-      return;
-    }
+    if (draftsPending.length === 0) return;
 
-    if (!confirm(`Are you sure you want to send all ${pendingDrafts.length} unsent email drafts now via SMTP?`)) {
-      return;
-    }
+    const confirmed = window.confirm(
+      `Are you sure you want to dispatch all ${draftsPending.length} pending email drafts via SMTP?`
+    );
+    if (!confirmed) return;
 
     setSendingAll(true);
     setAlert(null);
@@ -257,84 +286,229 @@ export default function DraftReviewPage() {
     }
   };
 
+  // Submit manual recruiter reply
+  const handleSaveReply = async () => {
+    if (!activeDraft) return;
+
+    setSavingReply(true);
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch('/api/replies/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          action: 'record',
+          draftId: activeDraft.id,
+          replyText,
+          notes: replyNotes,
+          userId: session?.user?.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setReplyModalOpen(false);
+        setReplyText('');
+        setReplyNotes('');
+        setAlert({ type: 'success', message: 'Recruiter reply recorded successfully!' });
+        fetchDrafts(activeDraft.id);
+        setActiveTab('replied');
+      } else {
+        setAlert({ type: 'error', message: data.error || 'Failed to record reply' });
+      }
+    } catch (e: any) {
+      setAlert({ type: 'error', message: e?.message || 'Error recording reply' });
+    } finally {
+      setSavingReply(false);
+    }
+  };
+
+  // Recruiter reply info from lead raw_data
+  const replyData = activeDraft?.leads?.raw_data?.reply;
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <MailCheck className="w-7 h-7 text-cyan-400" /> Draft Review & Manual Dispatch Queue
+            <MailCheck className="w-7 h-7 text-cyan-400" /> Outreach Queue & Dispatch Manager
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Review, edit, and manually approve AI outreach emails. Each email is sent only when you click <strong>Approve & Send</strong> or use <strong>Send All</strong>.
+            Review AI drafts, inspect delivered emails and recruiter replies, or batch-dispatch pending outreach.
           </p>
         </div>
 
+        {/* Batch Dispatch Button */}
+        {draftsPending.length > 0 && (
+          <button
+            onClick={handleSendAll}
+            disabled={sendingAll || loading}
+            id="btn-send-all-drafts"
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/30 flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            {sendingAll ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Batch Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 text-cyan-200" /> Send All ({draftsPending.length} Pending)
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Category Tabs: Drafts | Sent | Replies | Failed | All */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-md">
         <button
-          onClick={handleSendAll}
-          disabled={sendingAll || loading || drafts.filter((d) => d.status !== 'sent').length === 0}
-          id="btn-send-all-drafts"
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-lg shadow-cyan-600/30 flex items-center gap-2.5 transition-all disabled:opacity-50"
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'pending'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          }`}
         >
-          {sendingAll ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Batch Dispatching...
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4 text-cyan-200" /> Send All ({drafts.filter((d) => d.status !== 'sent').length} Pending)
-            </>
-          )}
+          <Bot className="w-3.5 h-3.5" /> Pending Drafts
+          <span className="px-2 py-0.5 rounded-full bg-slate-950/60 text-[10px] font-mono">
+            {draftsPending.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('sent')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'sent'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          }`}
+        >
+          <Send className="w-3.5 h-3.5" /> Sent Mails
+          <span className="px-2 py-0.5 rounded-full bg-slate-950/60 text-[10px] font-mono">
+            {draftsSent.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('replied')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'replied'
+              ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          }`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" /> Replies Got
+          <span className="px-2 py-0.5 rounded-full bg-slate-950/60 text-[10px] font-mono">
+            {draftsReplied.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('failed')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'failed'
+              ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          }`}
+        >
+          <AlertCircle className="w-3.5 h-3.5" /> Failed
+          <span className="px-2 py-0.5 rounded-full bg-slate-950/60 text-[10px] font-mono">
+            {draftsFailed.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'all'
+              ? 'bg-slate-800 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          }`}
+        >
+          All ({drafts.length})
         </button>
       </div>
 
-      {/* Workspace Grid */}
+      {/* Main Grid Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Draft Queue List */}
+        {/* Left Column: Draft Queue List with Serial Numbers (#) */}
         <div className="lg:col-span-4 rounded-2xl bg-slate-900 border border-slate-800 p-4 space-y-3 shadow-xl max-h-[750px] overflow-y-auto">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 px-2 flex justify-between items-center">
-            <span>Draft Queue ({drafts.length})</span>
-            <span className="text-[10px] text-cyan-400 font-mono">1-by-1 Approval</span>
-          </h2>
+          <div className="flex items-center justify-between px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <span>
+              {activeTab === 'pending'
+                ? `Drafts Queue (${draftsPending.length})`
+                : activeTab === 'sent'
+                ? `Sent Outreach (${draftsSent.length})`
+                : activeTab === 'replied'
+                ? `Recruiter Replies (${draftsReplied.length})`
+                : activeTab === 'failed'
+                ? `Failed Dispatches (${draftsFailed.length})`
+                : `All Items (${drafts.length})`}
+            </span>
+          </div>
 
           {loading ? (
             <div className="p-8 text-center text-xs text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin text-cyan-400 mx-auto mb-2" />
-              Loading drafts...
+              Loading outreach records...
             </div>
-          ) : drafts.length === 0 ? (
+          ) : visibleDrafts.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-500 italic">
-              No drafts generated yet. Go to <strong className="text-slate-300">Leads Dashboard</strong> and click &quot;Generate Drafts&quot;.
+              {activeTab === 'pending'
+                ? 'No pending drafts. Go to Leads Dashboard to queue new drafts.'
+                : activeTab === 'sent'
+                ? 'No outreach emails sent yet.'
+                : activeTab === 'replied'
+                ? 'No replies recorded yet. Click "Check / Sync Replies" to scan your inbox.'
+                : activeTab === 'failed'
+                ? 'No failed email deliveries!'
+                : 'No drafts found.'}
             </div>
           ) : (
             <div className="space-y-2">
-              {drafts.map((d) => {
+              {visibleDrafts.map((d, index) => {
                 const isActive = d.id === selectedDraftId;
+                const isReplied = d.status === 'replied';
+                const isSent = d.status === 'sent';
+                const isFailed = d.status === 'failed';
 
                 return (
                   <button
                     key={d.id}
                     onClick={() => handleSelectDraft(d)}
-                    className={`w-full text-left p-3.5 rounded-xl border transition-all space-y-2 ${
+                    className={`w-full text-left p-3 rounded-xl border transition-all space-y-2 ${
                       isActive
                         ? 'bg-slate-800 border-cyan-500/70 shadow-lg shadow-cyan-500/10'
                         : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-100 truncate max-w-[170px]">
-                        {d.leads.company}
-                      </span>
+                      {/* Serial Number & Company */}
+                      <div className="flex items-center gap-1.5 truncate max-w-[190px]">
+                        <span className="text-[10px] font-mono text-slate-500 font-bold shrink-0">
+                          #{index + 1}
+                        </span>
+                        <span className="font-bold text-xs text-slate-100 truncate">
+                          {d.leads.company}
+                        </span>
+                      </div>
 
+                      {/* Status Badge */}
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          d.status === 'sent'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : d.status === 'failed'
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          isReplied
+                            ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                            : isSent
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : isFailed
+                            ? 'bg-red-500/15 text-red-400 border border-red-500/30'
                             : d.status === 'reviewed'
-                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
                         }`}
                       >
                         {d.status}
@@ -345,7 +519,7 @@ export default function DraftReviewPage() {
 
                     <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
                       <span>{d.ai_provider.toUpperCase()}</span>
-                      <span>{d.leads.email}</span>
+                      <span className="truncate max-w-[140px]">{d.leads.email}</span>
                     </div>
                   </button>
                 );
@@ -358,6 +532,85 @@ export default function DraftReviewPage() {
         <div className="lg:col-span-8 space-y-6">
           {activeDraft ? (
             <div className="space-y-6">
+              {/* STATUS BANNER (Sent / Replied / Failed) */}
+              {activeDraft.status === 'replied' ? (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900 to-cyan-950/60 border border-cyan-500/40 shadow-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-cyan-300 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-cyan-400" /> Recruiter Replied to Your Email!
+                    </span>
+                    {replyData?.received_at && (
+                      <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-cyan-400" />{' '}
+                        {new Date(replyData.received_at).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  {replyData && (
+                    <div className="p-3 bg-slate-950/80 rounded-xl border border-cyan-800/40 text-xs space-y-1">
+                      <p className="font-semibold text-cyan-200">
+                        From: <span className="font-mono text-white">{replyData.from}</span>
+                      </p>
+                      <p className="text-slate-300 leading-relaxed italic">&quot;{replyData.snippet}&quot;</p>
+                      {replyData.notes && (
+                        <p className="text-[11px] text-slate-400 pt-1">
+                          <strong>Notes:</strong> {replyData.notes}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : activeDraft.status === 'sent' ? (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-emerald-950/60 border border-emerald-500/40 shadow-xl flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-emerald-300">
+                        Email Delivered via SMTP to {activeDraft.leads.email}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Dispatched at:{' '}
+                        {activeDraft.sent_at
+                          ? new Date(activeDraft.sent_at).toLocaleString()
+                          : 'Recorded as Sent'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Log Recruiter Reply Button */}
+                  <button
+                    onClick={() => {
+                      setReplyText('');
+                      setReplyNotes('');
+                      setReplyModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-cyan-600/20"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" /> Log Recruiter Reply
+                  </button>
+                </div>
+              ) : activeDraft.status === 'failed' ? (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-red-950/60 via-slate-900 to-red-950/60 border border-red-500/40 shadow-xl flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-red-300">Delivery Attempt Failed</p>
+                      <p className="text-[11px] text-red-400 font-mono">
+                        {activeDraft.error_message || 'SMTP rejection or recipient unreachable'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleApproveAndSend}
+                    disabled={sending}
+                    className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-red-600/20"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Retry Dispatch
+                  </button>
+                </div>
+              ) : null}
+
               {/* Lead Context Card */}
               <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
@@ -375,14 +628,20 @@ export default function DraftReviewPage() {
                       <Bot className="w-3.5 h-3.5 text-indigo-400" /> Generated via {activeDraft.ai_provider.toUpperCase()}
                     </span>
 
-                    <button
-                      onClick={() => handleRegenerate(activeDraft.ai_provider === 'claude' ? 'gemini' : 'claude')}
-                      disabled={regenerating}
-                      title="Switch model & regenerate draft"
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin text-cyan-400' : ''}`} />
-                    </button>
+                    {activeDraft.status !== 'sent' && activeDraft.status !== 'replied' && (
+                      <button
+                        onClick={() =>
+                          handleRegenerate(activeDraft.ai_provider === 'claude' ? 'gemini' : 'claude')
+                        }
+                        disabled={regenerating}
+                        title="Switch model & regenerate draft"
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw
+                          className={`w-4 h-4 ${regenerating ? 'animate-spin text-cyan-400' : ''}`}
+                        />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -408,21 +667,6 @@ export default function DraftReviewPage() {
                   </div>
                 )}
 
-                {activeDraft.leads.raw_data && Object.keys(activeDraft.leads.raw_data).length > 0 && (
-                  <div className="pt-2 border-t border-slate-800/60 space-y-1.5">
-                    <p className="text-[11px] font-semibold text-cyan-400 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Dynamic Excel Custom Fields (Used by AI):
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(activeDraft.leads.raw_data).map(([k, v]) => (
-                        <span key={k} className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-300 font-mono">
-                          <strong className="text-slate-400 font-sans">{k}:</strong> {v}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Attached Resume Info */}
                 <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                   <span className="flex items-center gap-1.5">
@@ -435,11 +679,14 @@ export default function DraftReviewPage() {
                 </div>
               </div>
 
-              {/* Email Editor Card */}
+              {/* Email Content Preview / Editor Card */}
               <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-cyan-400" /> Outreach Email Content Editor
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    {activeDraft.status === 'sent' || activeDraft.status === 'replied'
+                      ? 'Outreach Email (Sent)'
+                      : 'Outreach Email Content Editor'}
                   </h3>
                   {activeDraft.edited_by_user && (
                     <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
@@ -455,20 +702,22 @@ export default function DraftReviewPage() {
                     type="text"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
+                    disabled={activeDraft.status === 'sent' || activeDraft.status === 'replied'}
                     id="input-email-subject"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm font-medium focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm font-medium focus:outline-none focus:border-cyan-500 transition-colors disabled:opacity-75"
                   />
                 </div>
 
                 {/* Body Field */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Email Body Text:</label>
+                  <label className="text-xs font-semibold text-slate-300">Email Body:</label>
                   <textarea
                     rows={12}
                     value={bodyText}
                     onChange={(e) => setBodyText(e.target.value)}
+                    disabled={activeDraft.status === 'sent' || activeDraft.status === 'replied'}
                     id="input-email-body"
-                    className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-sans leading-relaxed focus:outline-none focus:border-cyan-500 transition-colors whitespace-pre-wrap"
+                    className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-sans leading-relaxed focus:outline-none focus:border-cyan-500 transition-colors whitespace-pre-wrap disabled:opacity-75"
                   />
                 </div>
 
@@ -490,57 +739,118 @@ export default function DraftReviewPage() {
                   </div>
                 )}
 
-                {activeDraft.status === 'failed' && activeDraft.error_message && (
-                  <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 text-xs text-red-300 space-y-1">
-                    <p className="font-semibold flex items-center gap-1.5 text-red-400">
-                      <ShieldAlert className="w-4 h-4" /> Last Send Attempt Failed:
-                    </p>
-                    <p className="text-[11px] font-mono text-red-300/80">{activeDraft.error_message}</p>
+                {/* Action Buttons Bar (for unsent drafts) */}
+                {activeDraft.status !== 'sent' && activeDraft.status !== 'replied' && (
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800">
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={saving || sending}
+                      id="btn-save-draft-edit"
+                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 text-slate-400" />
+                      )}
+                      Save Edits Only
+                    </button>
+
+                    <button
+                      onClick={handleApproveAndSend}
+                      disabled={sending || saving}
+                      id="btn-approve-and-send"
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/30 flex items-center gap-2.5 transition-all disabled:opacity-50"
+                    >
+                      {sending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Dispatching via SMTP...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" /> Approve & Send Now
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
-
-                {/* Action Buttons Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800">
-                  <button
-                    onClick={handleSaveEdit}
-                    disabled={saving || sending}
-                    id="btn-save-draft-edit"
-                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-slate-400" />}
-                    Save Edits Only
-                  </button>
-
-                  <button
-                    onClick={handleApproveAndSend}
-                    disabled={sending || saving}
-                    id="btn-approve-and-send"
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/30 flex items-center gap-2.5 transition-all disabled:opacity-50"
-                  >
-                    {sending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" /> Dispatching via SMTP...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" /> Approve & Send Now
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
             </div>
           ) : (
             <div className="p-16 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-3 shadow-xl">
               <MailCheck className="w-12 h-12 text-slate-600 mx-auto" />
-              <p className="text-sm font-semibold text-slate-300">No Draft Selected</p>
+              <p className="text-sm font-semibold text-slate-300">No Item Selected</p>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Select an email draft from the left queue to review its contents, make edits, and manually approve for sending.
+                Select an item from the left queue to review its contents, track status, or record replies.
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Manual Recruiter Reply Recording Modal */}
+      {replyModalOpen && activeDraft && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-sm font-bold text-white">Record Recruiter Response</h3>
+              </div>
+              <button
+                onClick={() => setReplyModalOpen(false)}
+                className="text-slate-400 hover:text-white text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              Record an incoming email reply or message from{' '}
+              <strong className="text-white">{activeDraft.leads.company}</strong> ({activeDraft.leads.email}):
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-400">Reply Snippet / Content:</label>
+              <textarea
+                rows={4}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="e.g. 'Hi Yuvam, thanks for reaching out. We would love to set up an introductory call...'"
+                className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-cyan-500 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-400">Additional Notes / Next Steps:</label>
+              <input
+                type="text"
+                value={replyNotes}
+                onChange={(e) => setReplyNotes(e.target.value)}
+                placeholder="e.g. Interview scheduled for Tuesday, salary discussed..."
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-cyan-500 transition-colors"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setReplyModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveReply}
+                disabled={savingReply || (!replyText.trim() && !replyNotes.trim())}
+                className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {savingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Save Recruiter Reply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
