@@ -31,6 +31,8 @@ import {
   MessageSquare,
   ArrowRight,
   Info,
+  Eye,
+  XCircle,
 } from 'lucide-react';
 
 interface Lead {
@@ -167,9 +169,9 @@ export default function LeadsPage() {
   // Filter leads based on search query, filter tabs, and experience
   const filteredLeads = leads.filter((l) => {
     // Tab filters
-    if (filterType === 'unsent' && (l.draftStatus === 'sent' || l.draftStatus === 'replied' || !l.has_valid_email)) return false;
+    if (filterType === 'unsent' && (['sent', 'delivered', 'opened', 'replied'].includes(l.draftStatus || '') || !l.has_valid_email)) return false;
     if (filterType === 'drafted' && l.draftStatus !== 'drafted' && l.draftStatus !== 'reviewed' && l.draftStatus !== 'approved') return false;
-    if (filterType === 'sent' && l.draftStatus !== 'sent') return false;
+    if (filterType === 'sent' && !['sent', 'delivered', 'opened'].includes(l.draftStatus || '')) return false;
     if (filterType === 'replied' && l.draftStatus !== 'replied') return false;
     if (filterType === 'valid' && !l.has_valid_email) return false;
     if (filterType === 'url' && l.has_valid_email) return false;
@@ -723,9 +725,21 @@ export default function LeadsPage() {
                           <span className="px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold inline-flex items-center gap-1">
                             <MessageSquare className="w-3 h-3 text-cyan-400" /> Replied
                           </span>
-                        ) : isSent ? (
+                        ) : lead.draftStatus === 'opened' ? (
+                          <span className="px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-[10px] font-bold inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3 text-purple-400" /> Opened
+                          </span>
+                        ) : lead.draftStatus === 'delivered' ? (
                           <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Sent
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Delivered
+                          </span>
+                        ) : lead.draftStatus === 'bounced' ? (
+                          <span className="px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[10px] font-bold inline-flex items-center gap-1">
+                            <XCircle className="w-3 h-3 text-rose-400" /> Bounced
+                          </span>
+                        ) : isSent ? (
+                          <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-bold inline-flex items-center gap-1">
+                            <Send className="w-3 h-3 text-blue-400" /> Sent
                           </span>
                         ) : lead.draftStatus === 'failed' ? (
                           <span className="px-2.5 py-1 rounded-full bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-bold inline-flex items-center gap-1">

@@ -125,17 +125,17 @@ export default function DraftReviewPage() {
   const draftsPending = drafts.filter(
     (d) => d.status === 'drafted' || d.status === 'reviewed' || d.status === 'approved'
   );
-  const draftsSent = drafts.filter((d) => d.status === 'sent');
+  const draftsSent = drafts.filter((d) => d.status === 'sent' || d.status === 'delivered' || d.status === 'opened');
   const draftsReplied = drafts.filter((d) => d.status === 'replied');
-  const draftsFailed = drafts.filter((d) => d.status === 'failed');
+  const draftsFailed = drafts.filter((d) => d.status === 'failed' || d.status === 'bounced');
 
   const visibleDrafts = drafts.filter((d) => {
     if (activeTab === 'pending') {
       return d.status === 'drafted' || d.status === 'reviewed' || d.status === 'approved';
     }
-    if (activeTab === 'sent') return d.status === 'sent';
+    if (activeTab === 'sent') return d.status === 'sent' || d.status === 'delivered' || d.status === 'opened';
     if (activeTab === 'replied') return d.status === 'replied';
-    if (activeTab === 'failed') return d.status === 'failed';
+    if (activeTab === 'failed') return d.status === 'failed' || d.status === 'bounced';
     return true;
   });
 
@@ -502,8 +502,14 @@ export default function DraftReviewPage() {
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           isReplied
                             ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
-                            : isSent
+                            : d.status === 'opened'
+                            ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                            : d.status === 'delivered'
                             ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : d.status === 'bounced'
+                            ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                            : isSent
+                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                             : isFailed
                             ? 'bg-red-500/15 text-red-400 border border-red-500/30'
                             : d.status === 'reviewed'

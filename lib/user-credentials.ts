@@ -11,6 +11,7 @@ export interface UserDynamicCredentials {
   smtpUser: string;
   smtpPass: string;
   smtpFromEmail: string;
+  brevoApiKey: string;
   candidateName: string;
   candidatePhone: string;
   githubUrl: string;
@@ -41,6 +42,7 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
     smtpUser: process.env.SMTP_USER || 'b8decd001@smtp-brevo.com',
     smtpPass: process.env.SMTP_PASS || '',
     smtpFromEmail: process.env.SMTP_FROM_EMAIL || 'yuvamk6@gmail.com',
+    brevoApiKey: process.env.BREVO_API_KEY || '',
     candidateName: process.env.MY_NAME || 'Yuvam Kumar',
     candidatePhone: process.env.MY_PHONE || '8650825573',
     githubUrl: process.env.MY_GITHUB || 'https://github.com/yuvamk',
@@ -70,6 +72,7 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
       smtpUser: dbSettings.smtp_user?.trim() || envDefaults.smtpUser,
       smtpPass: dbSettings.smtp_pass?.trim() || envDefaults.smtpPass,
       smtpFromEmail: dbSettings.smtp_from_email?.trim() || envDefaults.smtpFromEmail,
+      brevoApiKey: dbSettings.brevo_api_key?.trim() || envDefaults.brevoApiKey,
       candidateName: dbSettings.candidate_name?.trim() || envDefaults.candidateName,
       candidatePhone: dbSettings.candidate_phone?.trim() || envDefaults.candidatePhone,
       githubUrl: dbSettings.github_url?.trim() || envDefaults.githubUrl,

@@ -38,11 +38,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Selected leads not found' }, { status: 404 });
     }
 
-    // 3. SENT EMAIL PROTECTION: Check which leads or emails have ALREADY been sent or replied
+    // 3. SENT EMAIL PROTECTION: Check which leads or emails have ALREADY been sent, delivered, opened, or replied
     let sentDraftsQuery = supabase
       .from('email_drafts')
       .select('lead_id, leads(email)')
-      .in('status', ['sent', 'replied']);
+      .in('status', ['sent', 'delivered', 'opened', 'replied']);
 
     if (userId) {
       sentDraftsQuery = sentDraftsQuery.eq('user_id', userId);

@@ -3,7 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase-browser';
-import { Send, CheckCircle2, AlertTriangle, RefreshCw, Mail, Calendar, Loader2, Eye, Building } from 'lucide-react';
+import {
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  Mail,
+  Calendar,
+  Loader2,
+  Eye,
+  Building,
+  Radio,
+  ExternalLink,
+  ShieldAlert,
+  Inbox,
+  XCircle,
+  HelpCircle,
+} from 'lucide-react';
 
 interface SentRecord {
   id: string;
@@ -11,14 +27,16 @@ interface SentRecord {
   ai_provider: string;
   subject: string;
   body: string;
-  status: string;
+  status: string; // sent | delivered | opened | bounced | replied | failed
   error_message: string | null;
   created_at: string;
   sent_at: string | null;
   leads: {
+    id: string;
     company: string;
     email: string | null;
     key_skills: string | null;
+    raw_data?: Record<string, any> | null;
   };
 }
 
@@ -28,6 +46,11 @@ export default function SentHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [activeModalRecord, setActiveModalRecord] = useState<SentRecord | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  // Brevo Sync States
+  const [syncingBrevo, setSyncingBrevo] = useState(false);
+  const [brevoSyncMsg, setBrevoSyncMsg] = useState<{ type: 'success' | 'error' | 'warning'; text: string; authUrl?: string; detectedIp?: string } | null>(null);
+  const [ipModalOpen, setIpModalOpen] = useState(false);
 
   const fetchHistory = async () => {
     try {
@@ -44,8 +67,10 @@ export default function SentHistoryPage() {
       if (res.ok) {
         const data = await res.json();
         const allDrafts: SentRecord[] = data.drafts || [];
-        // Filter sent, replied, and failed records
-        const historyList = allDrafts.filter((d) => d.status === 'sent' || d.status === 'failed' || d.status === 'replied');
+        // Filter all outreach lifecycle records
+        const historyList = allDrafts.filter((d) =>
+          ['sent', 'delivered', 'opened', 'bounced', 'failed', 'replied'].includes(d.status)
+        );
         setRecords(historyList);
       }
     } catch (e) {
@@ -58,6 +83,49 @@ export default function SentHistoryPage() {
   useEffect(() => {
     fetchHistory();
   }, [router]);
+
+  const handleSyncBrevo = async () => {
+    setSyncingBrevo(true);
+    setBrevoSyncMsg(null);
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch('/api/brevo/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ userId: session?.user?.id }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setBrevoSyncMsg({
+          type: 'success',
+          text: `Brevo Sync Complete: ${data.deliveredCount || 0} Delivered, ${data.openedCount || 0} Opened, ${data.bouncedCount || 0} Bounced from ${data.totalEventsProcessed || 0} total Brevo events.`,
+        });
+        await fetchHistory();
+      } else if (data.ipAuthRequired) {
+        setBrevoSyncMsg({
+          type: 'warning',
+          text: `Brevo IP Authorization Required for IP: ${data.detectedIp || 'your current IP'}. Please authorize this IP in your Brevo account to allow sync.`,
+          authUrl: data.authUrl || 'https://app.brevo.com/security/authorised_ips',
+          detectedIp: data.detectedIp,
+        });
+        setIpModalOpen(true);
+      } else {
+        setBrevoSyncMsg({
+          type: 'error',
+          text: data.error || 'Failed to sync with Brevo.',
+        });
+      }
+    } catch (e: any) {
+      setBrevoSyncMsg({ type: 'error', text: e?.message || 'Network error during Brevo sync' });
+    } finally {
+      setSyncingBrevo(false);
+    }
+  };
 
   const handleRetrySend = async (record: SentRecord) => {
     setRetryingId(record.id);
@@ -82,16 +150,152 @@ export default function SentHistoryPage() {
     }
   };
 
+  // Metrics Calculation
+  const totalOutreach = records.length;
+  const openedCount = records.filter((r) => r.status === 'opened').length;
+  const repliedCount = records.filter((r) => r.status === 'replied').length;
+  const deliveredCount = records.filter((r) => r.status === 'delivered' || r.status === 'opened' || r.status === 'replied').length;
+  const bouncedCount = records.filter((r) => r.status === 'bounced').length;
+  const failedCount = records.filter((r) => r.status === 'failed').length;
+
+  const openRate = deliveredCount > 0 ? Math.round((openedCount / deliveredCount) * 100) : 0;
+  const replyRate = deliveredCount > 0 ? Math.round((repliedCount / deliveredCount) * 100) : 0;
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-          <Send className="w-7 h-7 text-emerald-400" /> Sent Outreach & Audit Log
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Complete audit history of emails dispatched via SMTP with exact timestamps and error diagnostics.
-        </p>
+      {/* Header with Brevo Sync button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <Send className="w-7 h-7 text-emerald-400" /> Sent Outreach & Delivery Tracking
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Real-time delivery verification, bounce diagnostics, and recruiter open tracking via Brevo & SMTP.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchHistory}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-all"
+            title="Refresh Table"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+
+          <button
+            onClick={handleSyncBrevo}
+            disabled={syncingBrevo}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all disabled:opacity-50"
+          >
+            {syncingBrevo ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                Syncing Brevo...
+              </>
+            ) : (
+              <>
+                <Radio className="w-4 h-4 text-emerald-200 animate-pulse" />
+                Sync Brevo Status
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Brevo Sync Notification Banner */}
+      {brevoSyncMsg && (
+        <div
+          className={`p-4 rounded-2xl border flex items-start justify-between gap-3 text-xs ${
+            brevoSyncMsg.type === 'success'
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+              : brevoSyncMsg.type === 'warning'
+              ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+              : 'bg-red-950/40 border-red-500/40 text-red-300'
+          }`}
+        >
+          <div className="flex items-start gap-2">
+            {brevoSyncMsg.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+            ) : (
+              <ShieldAlert className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+            )}
+            <div>
+              <p className="font-semibold">{brevoSyncMsg.text}</p>
+              {brevoSyncMsg.authUrl && (
+                <div className="mt-2 flex items-center gap-3">
+                  <a
+                    href={brevoSyncMsg.authUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold text-[11px] hover:bg-amber-400 transition-colors shadow-md"
+                  >
+                    Authorize IP ({brevoSyncMsg.detectedIp}) in Brevo <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    onClick={handleSyncBrevo}
+                    className="underline text-[11px] text-amber-200 hover:text-white"
+                  >
+                    I have authorized it, Retry Sync
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <button onClick={() => setBrevoSyncMsg(null)} className="text-slate-400 hover:text-white text-sm">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* KPI Stats Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
+          <span className="text-xs text-slate-400">Total Sent</span>
+          <span className="text-xl font-bold text-white mt-1">{totalOutreach}</span>
+          <span className="text-[10px] text-slate-500">Dispatched via Brevo</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/30 flex flex-col justify-between">
+          <span className="text-xs text-emerald-400 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Delivered
+          </span>
+          <span className="text-xl font-bold text-emerald-300 mt-1">{deliveredCount}</span>
+          <span className="text-[10px] text-emerald-500/80">Confirmed Inbox</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900 border border-purple-500/30 flex flex-col justify-between">
+          <span className="text-xs text-purple-400 flex items-center gap-1">
+            <Eye className="w-3.5 h-3.5" /> Opened
+          </span>
+          <span className="text-xl font-bold text-purple-300 mt-1">{openedCount}</span>
+          <span className="text-[10px] text-purple-400/80">{openRate}% open rate</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900 border border-cyan-500/30 flex flex-col justify-between">
+          <span className="text-xs text-cyan-400 flex items-center gap-1">
+            <Mail className="w-3.5 h-3.5" /> Replied
+          </span>
+          <span className="text-xl font-bold text-cyan-300 mt-1">{repliedCount}</span>
+          <span className="text-[10px] text-cyan-400/80">{replyRate}% response rate</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900 border border-rose-500/30 flex flex-col justify-between">
+          <span className="text-xs text-rose-400 flex items-center gap-1">
+            <XCircle className="w-3.5 h-3.5" /> Bounced
+          </span>
+          <span className="text-xl font-bold text-rose-300 mt-1">{bouncedCount}</span>
+          <span className="text-[10px] text-rose-400/80">Invalid Recipient</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
+          <span className="text-xs text-slate-400 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Failed
+          </span>
+          <span className="text-xl font-bold text-slate-300 mt-1">{failedCount}</span>
+          <span className="text-[10px] text-slate-500">SMTP Errors</span>
+        </div>
       </div>
 
       {/* Audit Log Table */}
@@ -103,9 +307,9 @@ export default function SentHistoryPage() {
                 <th className="p-4 w-12 text-center text-slate-500 font-mono">#</th>
                 <th className="p-4">Recipient & Company</th>
                 <th className="p-4">Subject Line</th>
-                <th className="p-4">AI Model</th>
-                <th className="p-4">Status</th>
+                <th className="p-4">Delivery Status</th>
                 <th className="p-4">Sent Timestamp</th>
+                <th className="p-4 text-center">Telemetry</th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -114,13 +318,13 @@ export default function SentHistoryPage() {
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin text-emerald-400 mx-auto mb-2" />
-                    Loading audit history...
+                    Loading delivery audit history...
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-500 italic">
-                    No emails dispatched yet. Approved emails will appear here.
+                    No emails dispatched yet. Approved emails will appear here with live delivery status.
                   </td>
                 </tr>
               ) : (
@@ -140,22 +344,36 @@ export default function SentHistoryPage() {
                       <p className="truncate text-slate-200 font-medium" title={r.subject}>
                         {r.subject}
                       </p>
+                      <span className="text-[10px] text-slate-500 uppercase font-mono">{r.ai_provider}</span>
                     </td>
-
-                    <td className="p-4 font-mono text-indigo-300 uppercase">{r.ai_provider}</td>
 
                     <td className="p-4">
                       {r.status === 'replied' ? (
-                        <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold flex items-center gap-1 w-max">
-                          <Mail className="w-3 h-3 text-cyan-400" /> Replied
+                        <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <Mail className="w-3.5 h-3.5 text-cyan-400" /> Replied by Recruiter
+                        </span>
+                      ) : r.status === 'opened' ? (
+                        <span className="px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/40 text-purple-300 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <Eye className="w-3.5 h-3.5 text-purple-400 animate-pulse" /> Opened / Viewed
+                        </span>
+                      ) : r.status === 'delivered' ? (
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Delivered (Brevo)
+                        </span>
+                      ) : r.status === 'bounced' ? (
+                        <span
+                          className="px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/40 text-rose-300 text-[10px] font-bold flex items-center gap-1.5 w-max cursor-help"
+                          title={r.error_message || 'Recipient email bounced'}
+                        >
+                          <XCircle className="w-3.5 h-3.5 text-rose-400" /> Bounced
                         </span>
                       ) : r.status === 'sent' ? (
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold flex items-center gap-1 w-max">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Sent
+                        <span className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <Send className="w-3.5 h-3.5 text-blue-400" /> Sent (In Transit)
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold flex items-center gap-1 w-max">
-                          <AlertTriangle className="w-3 h-3 text-red-400" /> Failed
+                        <span className="px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Failed
                         </span>
                       )}
                     </td>
@@ -163,10 +381,28 @@ export default function SentHistoryPage() {
                     <td className="p-4 text-slate-400 font-mono text-[11px]">
                       {r.sent_at ? (
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" /> {new Date(r.sent_at).toLocaleString()}
+                          <Calendar className="w-3 h-3" /> {new Date(r.sent_at).toLocaleDateString()}
                         </span>
                       ) : (
                         'N/A'
+                      )}
+                    </td>
+
+                    <td className="p-4 text-center">
+                      {r.status === 'bounced' && r.error_message ? (
+                        <span className="text-[10px] text-rose-400 font-mono truncate max-w-[150px] inline-block" title={r.error_message}>
+                          {r.error_message}
+                        </span>
+                      ) : r.status === 'opened' ? (
+                        <span className="text-[10px] text-purple-300 font-mono">
+                          Read by HR
+                        </span>
+                      ) : r.status === 'delivered' ? (
+                        <span className="text-[10px] text-emerald-400 font-mono">
+                          Server 250 OK
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 font-mono">-</span>
                       )}
                     </td>
 
@@ -200,7 +436,62 @@ export default function SentHistoryPage() {
         </div>
       </div>
 
-      {/* Modal View Payload */}
+      {/* Brevo IP Authorization Modal */}
+      {ipModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-amber-400 border-b border-slate-800 pb-3">
+              <ShieldAlert className="w-6 h-6" />
+              <h3 className="text-base font-bold text-white">Brevo IP Authorization Required</h3>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Brevo has an IP security safeguard enabled on your account. Because your connection is originating from IP{' '}
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">
+                {brevoSyncMsg?.detectedIp || '103.217.132.247'}
+              </span>
+              , Brevo requires you to whitelist this IP address before allowing API access.
+            </p>
+
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 space-y-2">
+              <p className="font-semibold text-white">How to fix in 30 seconds:</p>
+              <ol className="list-decimal list-inside space-y-1 text-slate-300">
+                <li>Click the button below to open Brevo Authorized IPs page.</li>
+                <li>Add IP <code className="text-emerald-400">{brevoSyncMsg?.detectedIp || '103.217.132.247'}</code> or click &ldquo;Authorize current IP&rdquo;.</li>
+                <li>Click &ldquo;Confirm &amp; Retry Sync&rdquo; below!</li>
+              </ol>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setIpModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Close
+              </button>
+              <a
+                href={brevoSyncMsg?.authUrl || 'https://app.brevo.com/security/authorised_ips'}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-lg"
+              >
+                Open Brevo Security Page <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <button
+                onClick={() => {
+                  setIpModalOpen(false);
+                  handleSyncBrevo();
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+              >
+                Retry Sync Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal View Sent Payload & Telemetry */}
       {activeModalRecord && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full space-y-5 shadow-2xl">
@@ -219,31 +510,45 @@ export default function SentHistoryPage() {
                 <span className="text-slate-400">Recipient Email: </span>
                 <span className="text-emerald-400 font-mono font-semibold">{activeModalRecord.leads?.email}</span>
               </div>
+
               <div>
-                <span className="text-slate-400">Subject: </span>
-                <span className="text-white font-medium">{activeModalRecord.subject}</span>
-              </div>
-              <div>
-                <p className="text-slate-400 mb-1">Body Text Sent:</p>
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 font-sans leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
-                  {activeModalRecord.body}
-                </div>
+                <span className="text-slate-400">Delivery Status: </span>
+                <span className="font-bold uppercase font-mono text-indigo-300">{activeModalRecord.status}</span>
               </div>
 
               {activeModalRecord.error_message && (
-                <div className="p-3 rounded-xl bg-red-950/50 border border-red-800 text-red-300">
-                  <p className="font-semibold text-red-400">SMTP Diagnostic Error:</p>
-                  <p className="font-mono text-[11px] mt-1">{activeModalRecord.error_message}</p>
+                <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300">
+                  <span className="font-bold">Error / Bounce Diagnostic: </span>
+                  <p className="mt-1 font-mono text-[11px]">{activeModalRecord.error_message}</p>
                 </div>
               )}
+
+              {activeModalRecord.leads?.raw_data?.reply && (
+                <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300">
+                  <span className="font-bold">Recruiter Reply: </span>
+                  <p className="mt-1 italic">&ldquo;{activeModalRecord.leads.raw_data.reply.snippet}&rdquo;</p>
+                </div>
+              )}
+
+              <div>
+                <span className="text-slate-400">Subject: </span>
+                <p className="text-white font-medium mt-0.5">{activeModalRecord.subject}</p>
+              </div>
+
+              <div>
+                <span className="text-slate-400">Email Body: </span>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 whitespace-pre-wrap font-mono text-[11px] max-h-60 overflow-y-auto mt-1">
+                  {activeModalRecord.body}
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setActiveModalRecord(null)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
               >
-                Close View
+                Done
               </button>
             </div>
           </div>

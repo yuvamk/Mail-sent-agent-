@@ -18,6 +18,8 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
+  Radio,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -45,6 +47,7 @@ export default function SettingsPage() {
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
   const [smtpFrom, setSmtpFrom] = useState('');
+  const [brevoApiKey, setBrevoApiKey] = useState('');
 
   useEffect(() => {
     async function loadSettings() {
@@ -76,6 +79,7 @@ export default function SettingsPage() {
           setSmtpUser(s.SMTP_USER || '');
           setSmtpPass(s.SMTP_PASS || '');
           setSmtpFrom(s.SMTP_FROM_EMAIL || '');
+          setBrevoApiKey(s.BREVO_API_KEY || '');
         }
       } catch (e) {
         console.error('Failed to load settings:', e);
@@ -114,6 +118,7 @@ export default function SettingsPage() {
           SMTP_USER: smtpUser,
           SMTP_PASS: smtpPass,
           SMTP_FROM_EMAIL: smtpFrom,
+          BREVO_API_KEY: brevoApiKey,
         }),
       });
 
@@ -407,6 +412,39 @@ Output ONLY valid JSON with keys "subject" and "body".`);
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 font-mono text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Section 5: Brevo REST API Key (Delivery, Bounce & Open Tracking) */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                <Radio className="w-4 h-4 text-purple-400" /> Brevo REST API Key (Delivery, Bounce &amp; Open Tracking)
+              </h2>
+              <a
+                href="https://app.brevo.com/settings/keys/api"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-purple-400 hover:text-purple-300 underline flex items-center gap-1"
+              >
+                Get Key in Brevo <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <label className="font-semibold text-slate-300">
+                Brevo REST API Key (<code className="text-purple-400 font-mono">xkeysib-...</code>):
+              </label>
+              <input
+                type="password"
+                value={brevoApiKey}
+                onChange={(e) => setBrevoApiKey(e.target.value)}
+                placeholder="xkeysib-3bf19a3c0e32b8f913e4ed4b332a997d6..."
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 font-mono text-sm focus:outline-none focus:border-purple-500"
+              />
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                This key allows ReachOut AI to automatically query Brevo to track which emails are delivered, which bounced, and which were opened by recruiters. Notice: this is different from the SMTP relay password (<code className="text-slate-400">xsmtpsib-...</code>).
+              </p>
             </div>
           </div>
 
