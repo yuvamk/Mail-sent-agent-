@@ -12,13 +12,24 @@ export async function GET(req: NextRequest) {
 
     const supabase = createAdminClient();
 
-    const { data: leads, error: leadsError } = await supabase
+    let { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('*, email_drafts(id, status, ai_provider)')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('imported_at', { ascending: false });
+
+    if (leadsError && leadsError.message?.includes('imported_at')) {
+      const fallback = await supabase
+        .from('leads')
+        .select('*, email_drafts(id, status, ai_provider)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      leads = fallback.data;
+      leadsError = fallback.error;
+    }
 
     if (leadsError) {
+      console.error('Database leads fetch error:', leadsError);
       return NextResponse.json({ error: leadsError.message }, { status: 500 });
     }
 
@@ -26,6 +37,8 @@ export async function GET(req: NextRequest) {
       const draft = lead.email_drafts && lead.email_drafts.length > 0 ? lead.email_drafts[0] : null;
       return {
         ...lead,
+        created_at: lead.created_at || lead.imported_at,
+        imported_at: lead.imported_at || lead.created_at,
         draftStatus: draft ? draft.status : null,
       };
     });

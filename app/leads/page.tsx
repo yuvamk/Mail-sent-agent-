@@ -46,6 +46,7 @@ export default function LeadsPage() {
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'valid' | 'url'>('all');
   const [expFilter, setExpFilter] = useState<string>('all');
@@ -75,9 +76,14 @@ export default function LeadsPage() {
       if (res.ok) {
         const data = await res.json();
         setLeads(data.leads || []);
+        setFetchError(null);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setFetchError(errData.error || 'Failed to load leads from database');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to fetch leads:', e);
+      setFetchError(e?.message || 'Network error fetching leads');
     } finally {
       setLoading(false);
     }
@@ -85,6 +91,16 @@ export default function LeadsPage() {
 
   useEffect(() => {
     fetchLeads();
+
+    const { data: authListener } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        fetchLeads();
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const filteredLeads = leads.filter((l) => {
@@ -190,6 +206,22 @@ export default function LeadsPage() {
           </button>
         )}
       </div>
+
+      {/* Error Alert */}
+      {fetchError && (
+        <div className="p-4 rounded-xl bg-red-950/50 border border-red-800 text-red-300 text-sm flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <span>{fetchError}</span>
+          </div>
+          <button
+            onClick={() => { setLoading(true); fetchLeads(); }}
+            className="px-3 py-1 rounded-lg bg-red-900 hover:bg-red-800 text-white text-xs font-semibold transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-xl">
