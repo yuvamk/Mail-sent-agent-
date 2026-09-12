@@ -72,18 +72,45 @@ function formatLeadDetails(lead: LeadContext): string {
   return details;
 }
 
+/**
+ * Global Groq Key Rotation Pool
+ * Supports automatic round-robin load-balancing and instant failover on rate limits (429/TPM/RPM limits)
+ */
+let groqRoundRobinPointer = 0;
+
+export function getAvailableGroqKeys(userKey?: string): string[] {
+  const candidateKeys = [
+    ...(userKey ? userKey.split(/[\n,]+/).map((k) => k.trim()) : []),
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_1,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+  ];
+
+  // Filter non-empty, deduplicate
+  const seen = new Set<string>();
+  const validKeys: string[] = [];
+  for (const k of candidateKeys) {
+    if (k && k.startsWith('gsk_') && !seen.has(k)) {
+      seen.add(k);
+      validKeys.push(k);
+    }
+  }
+
+  return validKeys;
+}
+
 export async function generateDraftWithGroq(
   lead: LeadContext,
   resumeText: string,
   creds: UserDynamicCredentials,
   groqModel: string = 'groq/compound'
 ): Promise<DraftOutput> {
-  const apiKey = creds.groqApiKey || process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    throw new Error('Groq API key is not configured in Settings.');
-  }
+  const allKeys = getAvailableGroqKeys(creds.groqApiKey);
 
-  const groq = new Groq({ apiKey });
+  if (allKeys.length === 0) {
+    throw new Error('No Groq API keys found. Please configure Groq API keys in Settings or .env.local.');
+  }
 
   const fullSenderContext = `${creds.candidateName}\nPhone: ${creds.candidatePhone}\nGitHub: ${creds.githubUrl}\nLinkedIn: ${creds.linkedinUrl}`;
 
@@ -100,25 +127,19 @@ Respond ONLY with valid JSON with keys "subject" and "body".`;
 
   let modelToUse = groqModel || 'groq/compound';
   let chatCompletion: any;
+  let lastError: any = null;
 
-  try {
-    chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: creds.customSystemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      model: modelToUse,
-      response_format: { type: 'json_object' },
-    });
-  } catch (err: any) {
-    // If the requested model is not available or decommissioned, automatically fallback to groq/compound
-    if (
-      err?.message?.includes('model_not_found') ||
-      err?.message?.includes('does not exist') ||
-      err?.status === 404
-    ) {
-      console.warn(`Groq model ${modelToUse} not available, falling back to groq/compound`);
-      modelToUse = 'groq/compound';
+  // Start with the next key in round-robin sequence to distribute load across all 3 keys
+  const startIndex = groqRoundRobinPointer % allKeys.length;
+  groqRoundRobinPointer = (groqRoundRobinPointer + 1) % allKeys.length;
+
+  // Try each available key in the pool if rate limit (429) or temporary error occurs
+  for (let attempt = 0; attempt < allKeys.length; attempt++) {
+    const currentKeyIndex = (startIndex + attempt) % allKeys.length;
+    const currentApiKey = allKeys[currentKeyIndex];
+    const groq = new Groq({ apiKey: currentApiKey });
+
+    try {
       chatCompletion = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: creds.customSystemPrompt },
@@ -127,9 +148,66 @@ Respond ONLY with valid JSON with keys "subject" and "body".`;
         model: modelToUse,
         response_format: { type: 'json_object' },
       });
-    } else {
-      throw err;
+
+      // If successful, clear lastError and proceed
+      lastError = null;
+      break;
+    } catch (err: any) {
+      lastError = err;
+
+      // Check if it was a model_not_found error (fallback to groq/compound)
+      if (
+        err?.message?.includes('model_not_found') ||
+        err?.message?.includes('does not exist') ||
+        err?.status === 404
+      ) {
+        console.warn(`Groq model ${modelToUse} not available, switching to groq/compound`);
+        modelToUse = 'groq/compound';
+        try {
+          chatCompletion = await groq.chat.completions.create({
+            messages: [
+              { role: 'system', content: creds.customSystemPrompt },
+              { role: 'user', content: prompt },
+            ],
+            model: modelToUse,
+            response_format: { type: 'json_object' },
+          });
+          lastError = null;
+          break;
+        } catch (retryErr: any) {
+          lastError = retryErr;
+        }
+      }
+
+      // Check for rate limit or quota exceeded (429)
+      const isRateLimit =
+        err?.status === 429 ||
+        err?.message?.includes('rate_limit') ||
+        err?.message?.includes('tokens per minute') ||
+        err?.message?.includes('requests per minute') ||
+        err?.message?.includes('Rate limit reached');
+
+      if (isRateLimit && allKeys.length > 1) {
+        console.warn(
+          `⚠️ Groq Key #${currentKeyIndex + 1} (${currentApiKey.slice(0, 10)}...) hit rate limit. Auto-rotating to next key in pool (${attempt + 1}/${allKeys.length})...`
+        );
+        // Continue to next key in loop immediately
+        continue;
+      }
+
+      // If it's a 5xx server error, also retry with next key
+      if (attempt < allKeys.length - 1 && err?.status >= 500) {
+        console.warn(`Groq server error on key #${currentKeyIndex + 1}, trying next key...`);
+        continue;
+      }
+
+      // Other fatal client errors, break
+      break;
     }
+  }
+
+  if (lastError || !chatCompletion) {
+    throw lastError || new Error('Failed to generate draft with all available Groq keys in pool.');
   }
 
   const responseText = chatCompletion.choices[0]?.message?.content || '';
@@ -148,7 +226,7 @@ Respond ONLY with valid JSON with keys "subject" and "body".`;
       outputTokens,
       totalTokens,
       costINR,
-      modelName: groqModel,
+      modelName: modelToUse,
     },
   };
 }

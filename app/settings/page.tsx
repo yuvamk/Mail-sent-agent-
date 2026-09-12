@@ -345,7 +345,7 @@ Output ONLY valid JSON with keys "subject" and "body".`);
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-cyan-500/50 text-slate-100 font-mono text-sm focus:outline-none focus:border-cyan-400 shadow-inner"
                 />
                 <p className="text-[10px] text-cyan-400/80 italic">
-                  Supports Llama 3.3 70B & Groq Compound models
+                  Multi-Key Pool Active: Automatically rotates and load-balances across all 3 Groq keys if any key hits rate limits.
                 </p>
               </div>
             </div>
