@@ -100,8 +100,17 @@ export default function ImportPage() {
     formData.append('action', 'preview');
 
     try {
-      const res = await fetch('/api/import', {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const url = session?.user?.id ? `/api/import?userId=${session.user.id}` : '/api/import';
+
+      const res = await fetch(url, {
         method: 'POST',
+        headers,
         body: formData,
       });
 
@@ -126,14 +135,24 @@ export default function ImportPage() {
     setImporting(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('action', 'import');
-    formData.append('mapping', JSON.stringify(mapping));
-
     try {
-      const res = await fetch('/api/import', {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        throw new Error('Unauthorized. Please sign in first.');
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('action', 'import');
+      formData.append('mapping', JSON.stringify(mapping));
+      formData.append('userId', session.user.id);
+
+      const res = await fetch(`/api/import?userId=${session.user.id}`, {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
 

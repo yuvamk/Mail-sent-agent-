@@ -44,7 +44,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const userId = await getUserIdFromRequest(req);
+    let userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      const formUserId = formData.get('userId') as string | null;
+      if (formUserId) {
+        userId = formUserId;
+      }
+    }
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 });
     }

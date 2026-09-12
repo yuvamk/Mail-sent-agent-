@@ -101,9 +101,13 @@ export default function ResumePage() {
 
   const handleSetActive = async (id: string) => {
     try {
-      const res = await fetch('/api/resume', {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch(`/api/resume?userId=${session?.user?.id || ''}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
         body: JSON.stringify({ resumeId: id }),
       });
       if (res.ok) {
