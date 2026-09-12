@@ -23,10 +23,13 @@ const PRICING_MAP: Record<string, TokenPricing> = {
   'gemini-1.5-pro': { inputCostPerMillionUSD: 1.25, outputCostPerMillionUSD: 5.0 },
 
   // Groq AI Models
-  'llama-3.3-70b-versatile': { inputCostPerMillionUSD: 0.59, outputCostPerMillionUSD: 0.79 },
-  'llama-3.1-8b-instant': { inputCostPerMillionUSD: 0.05, outputCostPerMillionUSD: 0.08 },
   'groq/compound': { inputCostPerMillionUSD: 0.59, outputCostPerMillionUSD: 0.79 },
   'groq/compound-mini': { inputCostPerMillionUSD: 0.05, outputCostPerMillionUSD: 0.08 },
+  'openai/gpt-oss-120b': { inputCostPerMillionUSD: 0.60, outputCostPerMillionUSD: 0.80 },
+  'openai/gpt-oss-20b': { inputCostPerMillionUSD: 0.15, outputCostPerMillionUSD: 0.20 },
+  'qwen/qwen3.8-27b': { inputCostPerMillionUSD: 0.30, outputCostPerMillionUSD: 0.40 },
+  'llama-3.3-70b-versatile': { inputCostPerMillionUSD: 0.59, outputCostPerMillionUSD: 0.79 },
+  'llama-3.1-8b-instant': { inputCostPerMillionUSD: 0.05, outputCostPerMillionUSD: 0.08 },
 };
 
 export function calculateCostINR(

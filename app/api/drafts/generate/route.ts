@@ -5,7 +5,7 @@ import { generateEmailDraft } from '@/lib/ai';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { leadIds, provider = 'groq', groqModel = 'llama-3.3-70b-versatile', userId } = body;
+    const { leadIds, provider = 'groq', groqModel = 'groq/compound', userId } = body;
 
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
       return NextResponse.json({ error: 'leadIds array is required and cannot be empty' }, { status: 400 });

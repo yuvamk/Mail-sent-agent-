@@ -86,7 +86,7 @@ export default function LeadsPage() {
 
   // AI Provider & Model Selection
   const [aiProvider, setAiProvider] = useState<'groq' | 'claude' | 'gemini' | 'both'>('groq');
-  const [groqModel, setGroqModel] = useState<string>('llama-3.3-70b-versatile');
+  const [groqModel, setGroqModel] = useState<string>('groq/compound');
   const [generating, setGenerating] = useState(false);
 
   // Live Generation Progress State
@@ -951,10 +951,11 @@ export default function LeadsPage() {
                             onChange={(e) => setGroqModel(e.target.value)}
                             className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs font-mono"
                           >
-                            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Recommended)</option>
-                            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Ultra Fast)</option>
-                            <option value="groq/compound">groq/compound</option>
-                            <option value="groq/compound-mini">groq/compound-mini</option>
+                            <option value="groq/compound">groq/compound (Ultra Fast - Recommended)</option>
+                            <option value="groq/compound-mini">groq/compound-mini (Lightning Fast)</option>
+                            <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (Deep Reasoning 120B)</option>
+                            <option value="openai/gpt-oss-20b">openai/gpt-oss-20b (Fast 20B)</option>
+                            <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b (27B Model)</option>
                           </select>
                         </div>
                       )}

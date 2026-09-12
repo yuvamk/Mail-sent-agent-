@@ -76,7 +76,7 @@ export async function generateDraftWithGroq(
   lead: LeadContext,
   resumeText: string,
   creds: UserDynamicCredentials,
-  groqModel: string = 'llama-3.3-70b-versatile'
+  groqModel: string = 'groq/compound'
 ): Promise<DraftOutput> {
   const apiKey = creds.groqApiKey || process.env.GROQ_API_KEY;
   if (!apiKey) {
@@ -98,14 +98,39 @@ ${formatLeadDetails(lead)}
 
 Respond ONLY with valid JSON with keys "subject" and "body".`;
 
-  const chatCompletion = await groq.chat.completions.create({
-    messages: [
-      { role: 'system', content: creds.customSystemPrompt },
-      { role: 'user', content: prompt },
-    ],
-    model: groqModel,
-    response_format: { type: 'json_object' },
-  });
+  let modelToUse = groqModel || 'groq/compound';
+  let chatCompletion: any;
+
+  try {
+    chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: creds.customSystemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      model: modelToUse,
+      response_format: { type: 'json_object' },
+    });
+  } catch (err: any) {
+    // If the requested model is not available or decommissioned, automatically fallback to groq/compound
+    if (
+      err?.message?.includes('model_not_found') ||
+      err?.message?.includes('does not exist') ||
+      err?.status === 404
+    ) {
+      console.warn(`Groq model ${modelToUse} not available, falling back to groq/compound`);
+      modelToUse = 'groq/compound';
+      chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: creds.customSystemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        model: modelToUse,
+        response_format: { type: 'json_object' },
+      });
+    } else {
+      throw err;
+    }
+  }
 
   const responseText = chatCompletion.choices[0]?.message?.content || '';
   const draft = cleanJsonResponse(responseText);
@@ -114,7 +139,7 @@ Respond ONLY with valid JSON with keys "subject" and "body".`;
   const inputTokens = usage?.prompt_tokens || Math.ceil(prompt.length / 4);
   const outputTokens = usage?.completion_tokens || Math.ceil(responseText.length / 4);
   const totalTokens = usage?.total_tokens || inputTokens + outputTokens;
-  const costINR = calculateCostINR(groqModel, inputTokens, outputTokens);
+  const costINR = calculateCostINR(modelToUse, inputTokens, outputTokens);
 
   return {
     ...draft,
@@ -256,7 +281,7 @@ export async function generateEmailDraft(
 
   let draftResult: DraftOutput;
   if (provider === 'groq') {
-    draftResult = await generateDraftWithGroq(lead, resumeText, creds, groqModel || 'llama-3.3-70b-versatile');
+    draftResult = await generateDraftWithGroq(lead, resumeText, creds, groqModel || 'groq/compound');
   } else if (provider === 'gemini') {
     draftResult = await generateDraftWithGemini(lead, resumeText, creds);
   } else {
