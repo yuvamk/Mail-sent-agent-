@@ -114,19 +114,7 @@ function LoginForm() {
     setError(null);
 
     try {
-      // 1. Try Supabase native OTP verification first
-      const { data: sbData, error: sbError } = await supabaseBrowser.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
-        token: otpCode.trim(),
-        type: 'email',
-      });
-
-      if (!sbError && sbData?.session) {
-        router.push('/leads');
-        return;
-      }
-
-      // 2. Fallback to our Brevo/Server OTP verification endpoint
+      // Directly verify against our platform SMTP OTP verification endpoint (zero Supabase mail/OTP dependency)
       const res = await fetch('/api/auth/otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

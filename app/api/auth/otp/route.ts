@@ -8,12 +8,15 @@ export const dynamic = 'force-dynamic';
 
 // In-memory OTP cache for instant delivery & verification (keyed by clean email)
 // Stored for 10 minutes
-const otpStore = new Map<string, { code: string; expiresAt: number; name?: string; phone?: string }>();
+const otpStore = new Map<
+  string,
+  { code: string; expiresAt: number; name?: string; phone?: string; password?: string }
+>();
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, email, code, name, phone } = body;
+    const { action, email, code, name, phone, password } = body;
 
     if (!email) {
       return NextResponse.json({ success: false, error: 'Email address is required' }, { status: 400 });
@@ -23,7 +26,7 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient();
 
     // =========================================================================
-    // ACTION 1: SEND 6-DIGIT OTP
+    // ACTION 1: SEND 6-DIGIT OTP VIA USER'S SMTP (ZERO SUPABASE EMAIL)
     // =========================================================================
     if (action === 'send') {
       const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -34,31 +37,33 @@ export async function POST(req: NextRequest) {
         expiresAt,
         name: name || undefined,
         phone: phone || undefined,
+        password: password || undefined,
       });
 
-      // Dispatch 6-digit code via Brevo / SMTP using branded White SaaS template
-      try {
-        const htmlEmail = renderOtpEmailTemplate(generatedCode, cleanEmail);
-        await sendPlatformEmail({
-          to: cleanEmail,
-          fromName: 'ReachOut AI Security',
-          subject: `🔐 ${generatedCode} is your ReachOut AI verification code`,
-          html: htmlEmail,
-          text: `Your ReachOut AI verification code is: ${generatedCode}. This code is valid for 10 minutes.`,
-        });
-      } catch (smtpErr) {
-        console.warn('[OTP SMTP dispatch warning]:', smtpErr);
+      console.log(`[OTP Request]: Generated 6-digit code for ${cleanEmail}. Dispatching via SMTP...`);
+
+      // Dispatch 6-digit code strictly via Brevo SMTP relay using branded White SaaS template
+      const htmlEmail = renderOtpEmailTemplate(generatedCode, cleanEmail);
+      const emailResult = await sendPlatformEmail({
+        to: cleanEmail,
+        fromName: 'ReachOut AI Security',
+        subject: `🔐 ${generatedCode} is your ReachOut AI verification code`,
+        html: htmlEmail,
+        text: `Your ReachOut AI verification code is: ${generatedCode}. This code is valid for 10 minutes.`,
+      });
+
+      if (!emailResult.success) {
+        console.error('[OTP Email Dispatch Error]:', emailResult.error);
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Failed to dispatch verification email via SMTP: ${emailResult.error}`,
+          },
+          { status: 500 }
+        );
       }
 
-      // Also trigger Supabase native OTP in background for maximum compatibility
-      try {
-        await supabase.auth.signInWithOtp({
-          email: cleanEmail,
-          options: { shouldCreateUser: true },
-        });
-      } catch (_) {
-        // ignore
-      }
+      console.log(`[OTP Dispatched Successfully]: ${cleanEmail} via SMTP`);
 
       return NextResponse.json({
         success: true,
@@ -67,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     // =========================================================================
-    // ACTION 2: VERIFY 6-DIGIT OTP
+    // ACTION 2: VERIFY 6-DIGIT OTP & AUTHENTICATE
     // =========================================================================
     if (action === 'verify') {
       if (!code) {
@@ -77,7 +82,7 @@ export async function POST(req: NextRequest) {
       const stored = otpStore.get(cleanEmail);
       const isCodeValid = stored && stored.code === code.trim() && Date.now() < stored.expiresAt;
 
-      // Also allow test master code 777999 for demo/testing
+      // Allow master test code 777999 for instant testing/debugging
       const isMasterCode = code.trim() === '777999';
 
       if (!isCodeValid && !isMasterCode) {
@@ -90,55 +95,70 @@ export async function POST(req: NextRequest) {
       // Clear code once used
       otpStore.delete(cleanEmail);
 
-      // Ensure user exists in Supabase
-      const { data: existingUser } = await supabase
-        .from('user_settings')
-        .select('user_id')
-        .eq('user_id', cleanEmail)
-        .maybeSingle();
+      const candidateName = stored?.name || name || '';
+      const candidatePhone = stored?.phone || phone || '';
+      const userPassword = stored?.password || password || `ReachOut_${Math.random().toString(36).slice(-8)}!`;
 
-      // Check if user exists in auth.users
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      let matchedUser = authUsers?.users?.find((u) => u.email?.toLowerCase() === cleanEmail);
+      // 1. Try to generate a magic link for the existing user (NO email sent by Supabase!)
+      let matchedUser = null;
+      let sessionUrl = null;
 
-      if (!matchedUser) {
-        // Create user with a generated password
-        const autoPass = `ReachOut_${Math.random().toString(36).slice(-8)}!`;
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: cleanEmail,
+      });
+
+      if (!linkError && linkData?.user) {
+        matchedUser = linkData.user;
+        sessionUrl = linkData?.properties?.action_link;
+
+        // If user provided a password, update it silently
+        if (password) {
+          await supabase.auth.admin.updateUserById(matchedUser.id, { password }).catch(() => {});
+        }
+      } else {
+        // User does not exist in Supabase auth yet -> create with email_confirm: true (NEVER triggers email)
         const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
           email: cleanEmail,
-          password: autoPass,
+          password: userPassword,
           email_confirm: true,
           user_metadata: {
-            candidate_name: stored?.name || name || '',
-            candidate_phone: stored?.phone || phone || '',
+            candidate_name: candidateName,
+            candidate_phone: candidatePhone,
           },
         });
 
-        if (!createErr && newUser?.user) {
-          matchedUser = newUser.user;
-          // Setup settings
-          await supabase.from('user_settings').upsert({
-            user_id: matchedUser.id,
-            candidate_name: stored?.name || name || '',
-            candidate_phone: stored?.phone || phone || '',
-            custom_system_prompt: DEFAULT_SYSTEM_PROMPT,
-            updated_at: new Date().toISOString(),
-          });
+        if (createErr) {
+          console.error('[User creation error during OTP verify]:', createErr.message);
+          return NextResponse.json(
+            { success: false, error: `Account setup failed: ${createErr.message}` },
+            { status: 400 }
+          );
         }
+
+        matchedUser = newUser?.user;
+
+        // Generate magic link session url
+        const { data: newLink } = await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: cleanEmail,
+        });
+        sessionUrl = newLink?.properties?.action_link;
       }
 
-      // Generate a magic link / session token for immediate sign in
-      let sessionUrl = null;
-      if (matchedUser) {
-        try {
-          const { data: linkData } = await supabase.auth.admin.generateLink({
-            type: 'magiclink',
-            email: cleanEmail,
-          });
-          sessionUrl = linkData?.properties?.action_link;
-        } catch (_) {
-          // ignore
-        }
+      // 2. Ensure user_settings record exists
+      if (matchedUser?.id) {
+        await supabase.from('user_settings').upsert(
+          {
+            user_id: matchedUser.id,
+            candidate_name: candidateName,
+            candidate_phone: candidatePhone,
+            custom_system_prompt: DEFAULT_SYSTEM_PROMPT,
+            allow_platform_keys: true,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' }
+        );
       }
 
       return NextResponse.json({

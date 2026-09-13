@@ -32,7 +32,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
-  // Step 1: Submit info and send OTP
+  // Step 1: Submit info and send OTP strictly via SMTP relay
   const handleSubmitInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -40,7 +40,7 @@ export default function SignupPage() {
     setAlreadyRegistered(false);
 
     try {
-      // 1. Dispatch OTP code to user's email
+      // Dispatch OTP code to user's email via platform SMTP
       const otpRes = await fetch('/api/auth/otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,6 +49,7 @@ export default function SignupPage() {
           email,
           name,
           phone,
+          password: password || undefined,
         }),
       });
 
@@ -56,18 +57,6 @@ export default function SignupPage() {
       if (!otpRes.ok || !otpData.success) {
         throw new Error(otpData.error || 'Failed to dispatch verification code');
       }
-
-      // Also create account record in background
-      await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          phone,
-          email,
-          password: password || 'ReachOut_Trial2026!',
-        }),
-      }).catch((e) => console.warn('Signup background sync notice:', e));
 
       setStep('otp');
     } catch (err: any) {
@@ -98,6 +87,7 @@ export default function SignupPage() {
           code: otpCode,
           name,
           phone,
+          password: password || undefined,
         }),
       });
 
@@ -106,7 +96,11 @@ export default function SignupPage() {
         throw new Error(data.error || 'Invalid verification code');
       }
 
-      // Sign in locally with password
+      if (data.actionLink) {
+        window.location.href = data.actionLink;
+        return;
+      }
+
       if (password) {
         await supabaseBrowser.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
