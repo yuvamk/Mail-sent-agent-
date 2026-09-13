@@ -319,7 +319,7 @@ Output ONLY valid JSON with keys "subject" and "body".`);
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-300 flex items-center justify-between">
                   <span>Google Gemini Key:</span>
-                  <span className="text-[10px] text-slate-500 font-mono">gemini-1.5-flash</span>
+                  <span className="text-[10px] text-slate-500 font-mono">gemini-flash-latest</span>
                 </label>
                 <input
                   type={showKeys ? 'text' : 'password'}

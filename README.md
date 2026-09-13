@@ -1,170 +1,244 @@
-# 🚀 Mail-Sent-Agent (ReachOut AI)
+# 🚀 ReachOut AI & LinkedIn Thought Leadership Platform
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00E5FF&center=true&vCenter=true&width=600&lines=ReachOut+AI+%7C+Multi-Tenant+Job+Outreach;Claude-3.5+%2B+Gemini-1.5+%2B+Groq+Llama-3.3;Schema-Less+Dynamic+Excel+Parser;Token+Billing+Analytics+in+Rupees+(%E2%82%B9);Strict+Safety+Mode+%7C+Manual+Approval" alt="Typing Banner" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=26&pause=1000&color=00E5FF&center=true&vCenter=true&width=800&lines=Dual-Engine+AI+Career+%26+Outreach+Superapp;LinkedIn+Thought+Leadership+Studio+%2B+Auto-Publisher;Live+Tech+Radar+(TechCrunch+%2B+HackerNews+%2B+ArXiv);3-Key+Gemini+Flash+Pool+%2B+Groq+Llama-3.3+Failover;Personalized+Cold+Outreach+%2B+Brevo+Delivery+Tracking;Token+Billing+Analytics+in+Indian+Rupees+(%E2%82%B9)" alt="Typing Banner" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/yuvamk/Mail-sent-agent-"><img src="https://img.shields.io/github/stars/yuvamk/Mail-sent-agent-?style=for-the-badge&color=00E5FF" alt="Stars" /></a>
-  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.3.4-black?style=for-the-badge&logo=next.js" alt="Next.js" /></a>
-  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-Postgres_RLS-3ECF8E?style=for-the-badge&logo=supabase" alt="Supabase" /></a>
-  <a href="https://groq.com"><img src="https://img.shields.io/badge/Groq_Cloud-Llama_3.3_70B-f55036?style=for-the-badge&logo=groq" alt="Groq" /></a>
-  <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Claude-Haiku_4.5-D97706?style=for-the-badge&logo=anthropic" alt="Anthropic" /></a>
-  <a href="https://render.com"><img src="https://img.shields.io/badge/Render-Deployment_Ready-46E3B7?style=for-the-badge&logo=render" alt="Render" /></a>
+  <a href="https://github.com/yuvamk/Mail-sent-agent-"><img src="https://img.shields.io/github/stars/yuvamk/Mail-sent-agent-?style=for-the-badge&color=00E5FF&logo=github" alt="Stars" /></a>
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.3.4_Turbopack-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" /></a>
+  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-Postgres_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
+  <a href="https://deepmind.google/technologies/gemini/"><img src="https://img.shields.io/badge/Google_Gemini-Flash_3--Key_Pool-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini" /></a>
+  <a href="https://groq.com"><img src="https://img.shields.io/badge/Groq-Llama_3.3_70B-F55036?style=for-the-badge&logo=fastapi&logoColor=white" alt="Groq" /></a>
+  <a href="https://linkedin.com"><img src="https://img.shields.io/badge/LinkedIn_API-v202608_REST-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
+  <a href="https://brevo.com"><img src="https://img.shields.io/badge/Brevo-SMTP_%26_Webhooks-0B996F?style=for-the-badge&logo=mailgun&logoColor=white" alt="Brevo" /></a>
 </p>
 
 ---
 
-## 🌟 Overview
+## 📸 Platform Visual Showcase
 
-**ReachOut AI** is an enterprise-grade, multi-tenant AI Outreach & Lead Generation Platform designed to automate personal job applications using **Groq Cloud (Llama 3.3 70B)**, **Anthropic Claude (Haiku 4.5)**, and **Google Gemini (1.5 Flash)**.
+<p align="center">
+  <img src="./public/images/hero-preview.jpg" alt="ReachOut AI Platform Overview" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" />
+</p>
 
-It features **100% Dynamic Per-User Settings**, **Schema-Less Excel Parsing**, **INR (₹) Token Billing Analytics**, **Sequential Batch Dispatching**, and **Strict Multi-Tenant Postgres Data Isolation (RLS)**.
-
----
-
-## ⚡ Core Features
-
-- 🔒 **Multi-Tenant Data Isolation (Postgres RLS)**: Every user's leads, resumes, draft emails, API keys, and sent history are completely private and isolated.
-- ⚡ **Multi-Model AI Drafting**: Choose between **Groq (Llama 3.3 70B / Compound)**, **Claude (Haiku 4.5)**, or **Gemini (1.5 Flash)**.
-- 🎨 **Dynamic Custom System Prompt Studio**: Customize prompt tone, bullet styles, and outreach constraints. Includes quick presets: *Ultra-Short*, *Formal*, *Recruiter Warm*, and *Default*.
-- 📊 **Tokenization & INR (₹) Billing Dashboard**: Real-time tracking of input/output tokens, today's spend, monthly spend, and per-email cost in Indian Rupees (₹).
-- 📁 **Schema-Less Excel Importer**: Upload any `.xlsx` table layout. Custom columns are saved into `raw_data jsonb` and automatically fed into the AI prompt context.
-- ✉️ **Sequential Dispatch Queue & Send All**: Process draft queue sequentially with 200ms delay to prevent 429 rate limit errors. Approve one-by-one or click **Send All**.
-- 📑 **Nodemailer PDF Attachments**: Automatically downloads active candidate PDF resumes from Supabase Storage and attaches them to outreach emails.
+<p align="center"><i>The Dual-Engine Dashboard: High-volume Cold Outreach combined with Automated LinkedIn Thought Leadership.</i></p>
 
 ---
 
-## 🏗️ Architecture Flow Diagram
+## ⚡ Overview
 
+**ReachOut AI** is an enterprise-grade, dual-engine career automation platform designed for modern tech professionals and builders. Built with **Next.js 16 (Turbopack)**, **Supabase Postgres (Row-Level Security)**, and **Multi-Key AI Orchestration**, the platform solves two major problems:
+
+1. **LinkedIn Thought Leadership & Daily Presence Engine**: Discovers live breakthrough AI/tech research (TechCrunch, HackerNews, ArXiv), crafts viral insights using **Gemini 1.5 Flash**, prompts aesthetic visuals, and publishes directly to personal LinkedIn profiles with binary image uploads via the official **LinkedIn REST API (v202608)**.
+2. **Cold Outreach & Lead Dispatch Pipeline**: Ingests schema-less recruiter spreadsheets (`.xlsx`/`.csv`), parses candidate resumes (`pdf-parse`), tailors contextual pitch emails, queues batch deliveries via **Brevo SMTP** (200ms debounce), tracks delivery status via **Webhooks**, and detects inbound recruiter responses via **IMAP**.
+
+---
+
+## 🌟 Dual-Engine Core Features
+
+### 🏛️ Pillar 1: LinkedIn AI Thought Leadership Studio
+
+<p align="center">
+  <img src="./public/images/linkedin-studio.jpg" alt="LinkedIn AI Studio Preview" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" />
+</p>
+
+- 📡 **Real-Time Tech Radar**:
+  - Automatically fetches live stories from **TechCrunch AI / VentureBeat**, top tech threads from **HackerNews**, and latest research papers from **ArXiv CS.AI**.
+  - One-click topic selector with direct source links and publishing timestamps.
+- 🧠 **Multi-Tone AI Post Synthesizer**:
+  - Switch dynamically between **Thought Leader**, **Technical Deep-Dive**, **Builder / Practical**, and **Provocative / Contrarian**.
+  - Powered by **Google Gemini 1.5 Flash** with resilient Groq fallback.
+- 📊 **Live Generation HUD & Multi-Stage Progress Bar**:
+  - Interactive status bar (0% → 100%) tracking generation stages:
+    - `0% - 25%`: *Scanning Live Tech Radar & Sources...*
+    - `25% - 60%`: *Synthesizing Analysis with Gemini Flash...*
+    - `60% - 85%`: *Crafting Contextual Visual Prompt & Metaphors...*
+    - `85% - 100%`: *Rendering 3 Visual Options (Technical / Concept / Minimal)...*
+  - Real-time HUD displaying the active model (`gemini-flash-latest`) and active 3-key pool.
+- 🎨 **Visual Options & Image Scraper**:
+  - Generates 3 contextual visual prompts: **Technical Diagram**, **Conceptual Metaphor**, and **Minimal Typographic Card**.
+  - Includes fallback web scraping for original high-resolution news cover images.
+- 🚀 **1-Click Direct LinkedIn Publishing (v202608)**:
+  - Full OAuth 2.0 integration with `w_member_social` permissions.
+  - Multi-step asset upload: `initializeUpload` → direct binary byte streaming (`Uint8Array`) → `rest/posts` publishing.
+- 🎉 **Celebratory Success Modal**:
+  - Displays immediately upon publishing with emerald confetti glow, author account details, and live status.
+  - Direct **`View Live Post on LinkedIn ↗`** button and **`Copy Post Link`** button.
+
+---
+
+### 📬 Pillar 2: High-Volume Cold Outreach Engine
+
+<p align="center">
+  <img src="./public/images/cold-outreach.jpg" alt="Cold Outreach Engine Preview" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" />
+</p>
+
+- 📂 **Schema-Less Excel & CSV Ingestion**:
+  - Upload arbitrary recruiter or lead tables. Custom columns are saved into Postgres `raw_data jsonb` and automatically fed into the AI prompt context.
+- 📄 **Deep Resume Parsing (`pdf-parse`)**:
+  - Ingests candidate PDF resumes stored in Supabase Storage, extracts core technical skills, and matches them to lead requirements.
+- 🛡️ **Anti-Spam Sent Email Protection**:
+  - Automatic deduplication based on `(user_id, company, email)`. Never pitch the same recruiter twice.
+- ⚡ **Zero-Rate-Limit Sequential Batch Queue**:
+  - Queues drafts with a 200ms inter-email dispatch delay to protect domain reputation and prevent SMTP throttling.
+- 📨 **Brevo SMTP & Webhook Delivery Tracking**:
+  - Ingests Brevo webhooks (`/api/webhooks/brevo`) to record delivered, opened, clicked, and bounced events.
+- 📥 **Inbound IMAP Reply Tracking (`imapflow`)**:
+  - Connects to your email provider via IMAP to detect incoming responses and link replies directly to the outreach history.
+
+---
+
+## 🔄 Resilient Multi-Key AI Pool Architecture
+
+To guarantee 99.9% uptime without interruptions caused by rate limits (`429`) or model spikes (`503`), ReachOut AI implements automatic key rotation and provider fallbacks:
+
+```mermaid
+flowchart TD
+    A[User Generation Request] --> B[Gemini Key Pool Manager]
+    B --> C{Key #1 Available?}
+    C -- Yes --> D[Try Gemini Key #1]
+    C -- 429 / 503 --> E[Rotate to Gemini Key #2]
+    E -- 429 / 503 --> F[Rotate to Gemini Key #3]
+    F -- Pool Exhausted --> G[Automatic Failover to Groq Llama 3.3]
+    D -- Success --> H[JSON Markdown Fence Stripper]
+    E -- Success --> H
+    F -- Success --> H
+    G -- Success --> H
+    H --> I[Render Dynamic UI / Live Feed]
 ```
-┌─────────────────┐       ┌──────────────────────┐       ┌────────────────────────┐
-│  Dynamic Excel  │ ────> │  Leads & Raw JSONB   │ ────> │   Multi-Model AI       │
-│  (.xlsx upload) │       │   (Supabase RLS)     │       │ (Groq / Claude / Gen)  │
-└─────────────────┘       └──────────────────────┘       └────────────────────────┘
-                                                                      │
-                                                                      ▼
-┌─────────────────┐       ┌──────────────────────┐       ┌────────────────────────┐
-│ INR Billing (₹) │ <──── │ Batch Send All Queue │ <──── │   Draft Review & Edit  │
-│  Log Dashboard  │       │  (Nodemailer SMTP)   │       │  (One-click Approval)  │
-└─────────────────┘       └──────────────────────┘       └────────────────────────┘
-```
 
 ---
 
-## 🛠️ Minimal Environment Setup (Render / Production)
+## 💰 Token Cost Breakdown in Indian Rupees (₹)
 
-Because **ReachOut AI** is 100% dynamic and multi-tenant, **you DO NOT need to configure AI API keys or SMTP passwords in server environment variables**. Every user enters their own keys in their private Settings UI, which are stored securely in Postgres.
+The application provides real-time token tracking and calculates exact costs in Indian Rupees:
 
-Only the Supabase connection keys are required in `.env.local` or Render environment settings:
+| AI Model | Input Cost (per 1M tokens) | Output Cost (per 1M tokens) | Approx. Cost per Email / Post |
+| :--- | :---: | :---: | :---: |
+| **Google Gemini 1.5 Flash** | **₹6.25** | **₹25.00** | **~₹0.008** *(Sub-paisa!)* |
+| **Groq Cloud (Llama 3.3 70B)** | **₹49.17** | **₹65.83** | **~₹0.040** |
+| **Anthropic Claude Haiku 4.5** | **₹66.40** | **₹332.00** | **~₹0.120** |
+
+---
+
+## 🗄️ Database Architecture (Supabase Postgres)
+
+The platform runs on **Supabase** with **Row-Level Security (RLS)** ensuring 100% data isolation between users.
+
+```mermaid
+erDiagram
+    USERS ||--o{ LEADS : owns
+    USERS ||--o{ RESUMES : uploads
+    USERS ||--o{ EMAIL_DRAFTS : drafts
+    USERS ||--o{ USER_SETTINGS : configures
+    USERS ||--o{ API_USAGE_LOGS : tracks
+    USERS ||--o{ LINKEDIN_POSTS : publishes
+    USERS ||--o{ LINKEDIN_ACCOUNTS : links
+
+    LEADS ||--o{ EMAIL_DRAFTS : generates
+    RESUMES ||--o{ EMAIL_DRAFTS : attaches
+```
+
+### Table Definitions:
+
+- **`leads`**: Stores company, location, recruiter email, and dynamic `raw_data jsonb` from spreadsheets.
+- **`resumes`**: Stores file names, extracted text, and Supabase storage paths.
+- **`email_drafts`**: Stores generated outreach bodies, subject lines, delivery statuses (`drafted` / `reviewed` / `approved` / `sent` / `failed`), and error logs.
+- **`user_settings`**: Per-user dynamic credentials, SMTP host, candidate portfolio links, and custom system prompt presets.
+- **`api_usage_logs`**: Token counts and estimated spend in INR (₹) per draft.
+- **`linkedin_posts`**: Stores topic, live research source, synthesized post content, visual prompts, and `linkedin_post_urn`.
+- **`linkedin_accounts`**: Stores user OAuth access tokens, profile headline, person URN, and avatar URL.
+
+---
+
+## 🛠️ Getting Started & Installation
+
+### 1. Prerequisites
+- **Node.js**: v20.x or higher
+- **Supabase Account**: Free project on [supabase.com](https://supabase.com)
+- **LinkedIn Developer App**: Configured with `w_member_social` and `openid` permissions
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/yuvamk/Mail-sent-agent-.git
+cd Mail-sent-agent-
+npm install
+```
+
+### 3. Environment Variables
+Create a `.env.local` file in the project root:
 
 ```env
-# Required Supabase Database & Auth Keys ONLY
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
+# Google Gemini API Keys (3-Key Auto-Rotation Pool)
+GEMINI_API_KEY_1=your-gemini-key-1
+GEMINI_API_KEY_2=your-gemini-key-2
+GEMINI_API_KEY_3=your-gemini-key-3
+
+# Groq Cloud Keys (Failover Pool)
+GROQ_API_KEY_1=your-groq-key-1
+GROQ_API_KEY_2=your-groq-key-2
+
+# Brevo SMTP Configuration (Optional server default)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your-smtp-user
+SMTP_PASS=your-smtp-key
+SMTP_FROM_EMAIL=your-verified-email@example.com
+
+# LinkedIn Credentials (Optional server default)
+LINKEDIN_ACCESS_TOKEN=your-access-token
+LINKEDIN_PERSON_URN=urn:li:person:your-urn
+
+# Application URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-> **Note**: `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, and `SMTP_*` credentials are entered dynamically by each user in the app at `/settings` and stored in Supabase Postgres.
-
----
-
-## 🗄️ Database Schema Setup (Supabase SQL)
-
-Run the following in your Supabase **SQL Editor**:
-
-```sql
--- Create leads table with dynamic raw_data JSONB
-create table if not exists leads (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete cascade,
-  company text not null,
-  location text,
-  salary text,
-  experience text,
-  key_skills text,
-  email text,
-  contact_number text,
-  raw_data jsonb,
-  created_at timestamp with time zone default timezone('utc'::text, now())
-);
-
--- Enable RLS on leads
-alter table leads enable row level security;
-create policy "User Leads Isolation" on leads for all using (user_id = auth.uid());
-
--- User Settings table for dynamic keys & prompts
-create table if not exists user_settings (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  custom_system_prompt text,
-  anthropic_api_key text,
-  gemini_api_key text,
-  groq_api_key text,
-  smtp_host text,
-  smtp_port text,
-  smtp_user text,
-  smtp_pass text,
-  smtp_from_email text,
-  candidate_name text,
-  candidate_phone text,
-  github_url text,
-  linkedinUrl text,
-  updated_at timestamp with time zone default timezone('utc'::text, now())
-);
-
--- Enable RLS on user_settings
-alter table user_settings enable row level security;
-create policy "User Settings Isolation" on user_settings for all using (user_id = auth.uid());
-```
-
----
-
-## 🌐 Deploying Live to Render
-
-To host **ReachOut AI** live on **Render**:
-
-1. **Push Code to GitHub**:
-   ```bash
-   git add .
-   git commit -m "Configure 100% dynamic DB credentials for Render"
-   git push origin main
-   ```
-
-2. **Create Web Service on Render**:
-   - Go to [Render Dashboard](https://dashboard.render.com).
-   - Click **New +** -> **Web Service**.
-   - Connect your GitHub repository `yuvamk/Mail-sent-agent-`.
-
-3. **Configure Settings**:
-   - **Environment**: `Node`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
-
-4. **Add Environment Variables (Only 3 Supabase Keys Needed)**:
-   In Render's **Environment** tab, add ONLY:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-
-5. **Deploy**:
-   Click **Create Web Service**. Render will build and deploy your app! Each user who logs in will enter their own Groq/Claude/Gemini API keys and SMTP credentials dynamically in `/settings`.
-
----
-
-## 💻 Local Development
+### 4. Supabase MCP & Database Migration
+Set up Supabase MCP and execute the database migration:
 
 ```bash
-# Install dependencies
-npm install
-
-# Run dev server
-npm run dev
+# Install Supabase Agent Skills
+npx skills add supabase/agent-skills
 ```
 
-Visit `http://localhost:3000` in your browser.
+Apply the SQL schema in `supabase/schema.sql` and `supabase/migrations/20260913_linkedin_posts.sql` via the Supabase SQL Editor.
+
+### 5. Run Locally
+```bash
+npm run dev
+# Open http://localhost:3000 in your browser
+```
+
+For production builds:
+```bash
+npm run build
+npm start
+```
+
+---
+
+## 🔒 Security & Privacy
+
+- **Data Privacy**: Strict Postgres RLS policies ensure users can only read and modify their own leads, drafts, credentials, and LinkedIn posts.
+- **Zero Hardcoded Secrets**: Secrets are read exclusively from environment variables and encrypted Postgres user settings.
+- **LinkedIn API Compliance**: Adheres to the latest LinkedIn REST API versioning (`202608`) with approved member social scopes.
+
+---
+
+## 👨‍💻 Author & Contributions
+
+Built with ❤️ by **[Yuvam Kumar](https://github.com/yuvamk)**
+- LinkedIn: [Yuvam Kumar](https://www.linkedin.com/in/yuvam-kumar-637712227)
+- GitHub: [@yuvamk](https://github.com/yuvamk)
 
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/yuvamk">Yuvam Kumar</a>
+  <b>⭐ Star this repository if it helped streamline your job search and professional brand! ⭐</b>
 </p>

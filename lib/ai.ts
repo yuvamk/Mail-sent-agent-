@@ -4,6 +4,7 @@ import Groq from 'groq-sdk';
 import { UserDynamicCredentials, getUserCredentials } from '@/lib/user-credentials';
 import { calculateCostINR } from '@/lib/token-pricing';
 import { createAdminClient } from '@/lib/supabase-server';
+import { executeWithGeminiRotation, getAvailableGeminiKeys } from '@/lib/gemini-keys';
 
 export interface LeadContext {
   id?: string;
@@ -236,18 +237,6 @@ export async function generateDraftWithGemini(
   resumeText: string,
   creds: UserDynamicCredentials
 ): Promise<DraftOutput> {
-  const apiKey = creds.geminiApiKey;
-  if (!apiKey) {
-    throw new Error('Gemini API key is not configured in Settings.');
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = 'gemini-1.5-flash';
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig: { responseMimeType: 'application/json' },
-  });
-
   const fullSenderContext = `${creds.candidateName}\nPhone: ${creds.candidatePhone}\nGitHub: ${creds.githubUrl}\nLinkedIn: ${creds.linkedinUrl}`;
 
   const prompt = `${creds.customSystemPrompt}
@@ -267,7 +256,18 @@ Respond with JSON format:
   "body": "..."
 }`;
 
-  const result = await model.generateContent(prompt);
+  const { result, modelUsed } = await executeWithGeminiRotation(
+    async (model) => {
+      const res = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' },
+      });
+      return res;
+    },
+    'gemini-flash-latest',
+    creds.geminiApiKey
+  );
+
   const responseText = result.response.text();
   const draft = cleanJsonResponse(responseText);
 
@@ -275,7 +275,7 @@ Respond with JSON format:
   const inputTokens = usageMeta?.promptTokenCount || Math.ceil(prompt.length / 4);
   const outputTokens = usageMeta?.candidatesTokenCount || Math.ceil(responseText.length / 4);
   const totalTokens = inputTokens + outputTokens;
-  const costINR = calculateCostINR(modelName, inputTokens, outputTokens);
+  const costINR = calculateCostINR(modelUsed, inputTokens, outputTokens);
 
   return {
     ...draft,
@@ -284,7 +284,7 @@ Respond with JSON format:
       outputTokens,
       totalTokens,
       costINR,
-      modelName,
+      modelName: modelUsed,
     },
   };
 }

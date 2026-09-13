@@ -1001,8 +1001,8 @@ export default function LeadsPage() {
                           className="accent-indigo-500"
                         />
                         <div>
-                          <p className="text-xs font-semibold">Google Gemini 1.5 Flash</p>
-                          <p className="text-[10px] text-slate-400">Structured JSON email generation</p>
+                          <p className="text-xs font-semibold">Google Gemini Flash (gemini-flash-latest)</p>
+                          <p className="text-[10px] text-slate-400">Fast structured JSON generation</p>
                         </div>
                       </div>
                     </label>

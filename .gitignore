@@ -45,5 +45,8 @@ next-env.d.ts
 *.jpg
 *.jpeg
 *.pdf
+!public/images/**
 scratch/
+supabase/.temp/
+
 

@@ -19,6 +19,7 @@ const PRICING_MAP: Record<string, TokenPricing> = {
   'claude-3-5-sonnet-20241022': { inputCostPerMillionUSD: 3.0, outputCostPerMillionUSD: 15.0 },
 
   // Gemini Models
+  'gemini-flash-latest': { inputCostPerMillionUSD: 0.075, outputCostPerMillionUSD: 0.3 },
   'gemini-1.5-flash': { inputCostPerMillionUSD: 0.075, outputCostPerMillionUSD: 0.3 },
   'gemini-1.5-pro': { inputCostPerMillionUSD: 1.25, outputCostPerMillionUSD: 5.0 },
 
