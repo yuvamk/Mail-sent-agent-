@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
       supabase.from('resumes').select('id, user_id, file_name, uploaded_at'),
       supabase.from('linkedin_posts').select('id, user_id, status, topic, created_at, posted_at'),
       supabase.from('api_usage_logs').select('id, user_id, provider, total_tokens, estimated_cost_inr, created_at'),
-      supabase.from('user_settings').select('user_id, is_admin, gemini_api_key, groq_api_key, anthropic_api_key, smtp_host, smtp_pass, brevo_api_key, linkedin_access_token, candidate_name, updated_at'),
+      supabase.from('user_settings').select('user_id, is_admin, allow_platform_keys, gemini_api_key, groq_api_key, anthropic_api_key, smtp_host, smtp_pass, brevo_api_key, linkedin_access_token, candidate_name, updated_at'),
       supabase.from('linkedin_accounts').select('user_id, is_connected, profile_name, updated_at'),
       supabase.from('user_subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
@@ -147,6 +147,7 @@ export async function GET(req: NextRequest) {
         createdAt: u.created_at,
         lastSignInAt: u.last_sign_in_at || null,
         isAdmin: isUserPlatformAdmin,
+        allowPlatformKeys: uSetting?.allow_platform_keys !== false,
         candidateName: uSetting?.candidate_name || null,
         leadsCount: uLeads.length,
         resumesCount: uResumes.length,

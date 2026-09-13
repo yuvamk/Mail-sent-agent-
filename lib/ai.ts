@@ -79,13 +79,17 @@ function formatLeadDetails(lead: LeadContext): string {
  */
 let groqRoundRobinPointer = 0;
 
-export function getAvailableGroqKeys(userKey?: string): string[] {
+export function getAvailableGroqKeys(userKey?: string, allowPlatformFallback: boolean = true): string[] {
   const candidateKeys = [
     ...(userKey ? userKey.split(/[\n,]+/).map((k) => k.trim()) : []),
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_API_KEY_1,
-    process.env.GROQ_API_KEY_2,
-    process.env.GROQ_API_KEY_3,
+    ...(allowPlatformFallback
+      ? [
+          process.env.GROQ_API_KEY,
+          process.env.GROQ_API_KEY_1,
+          process.env.GROQ_API_KEY_2,
+          process.env.GROQ_API_KEY_3,
+        ]
+      : []),
   ];
 
   // Filter non-empty, deduplicate
@@ -107,10 +111,14 @@ export async function generateDraftWithGroq(
   creds: UserDynamicCredentials,
   groqModel: string = 'groq/compound'
 ): Promise<DraftOutput> {
-  const allKeys = getAvailableGroqKeys(creds.groqApiKey);
+  const allKeys = getAvailableGroqKeys(creds.groqApiKey, creds.allowPlatformKeys);
 
   if (allKeys.length === 0) {
-    throw new Error('No Groq API keys found. Please configure Groq API keys in Settings or .env.local.');
+    throw new Error(
+      creds.allowPlatformKeys
+        ? 'No Groq API keys found. Please configure Groq API keys in Settings or .env.local.'
+        : 'Your account policy requires you to supply your own Groq API key. Please configure it in Settings.'
+    );
   }
 
   const fullSenderContext = `${creds.candidateName}\nPhone: ${creds.candidatePhone}\nGitHub: ${creds.githubUrl}\nLinkedIn: ${creds.linkedinUrl}`;
@@ -265,7 +273,8 @@ Respond with JSON format:
       return res;
     },
     'gemini-flash-latest',
-    creds.geminiApiKey
+    creds.geminiApiKey,
+    creds.allowPlatformKeys
   );
 
   const responseText = result.response.text();
@@ -296,7 +305,11 @@ export async function generateDraftWithClaude(
 ): Promise<DraftOutput> {
   const apiKey = creds.anthropicApiKey;
   if (!apiKey) {
-    throw new Error('Anthropic Claude API key is not configured in Settings.');
+    throw new Error(
+      creds.allowPlatformKeys
+        ? 'Anthropic Claude API key is not configured in Settings.'
+        : 'Your account policy requires you to supply your own Anthropic Claude API key. Please configure it in Settings.'
+    );
   }
 
   const anthropic = new Anthropic({ apiKey });

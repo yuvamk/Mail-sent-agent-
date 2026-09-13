@@ -66,7 +66,8 @@ Write the ultimate LinkedIn post on this topic.`;
           return await model.generateContent(prompt);
         },
         'gemini-flash-latest',
-        creds.geminiApiKey
+        creds.geminiApiKey,
+        creds.allowPlatformKeys
       );
       const rawText = result.response.text();
       if (rawText) {
@@ -87,7 +88,7 @@ Write the ultimate LinkedIn post on this topic.`;
 
   // 2. Groq (groq/compound)
   const tryGroq = async (): Promise<LinkedInPostOutput | null> => {
-    const keys = getAvailableGroqKeys(creds.groqApiKey);
+    const keys = getAvailableGroqKeys(creds.groqApiKey, creds.allowPlatformKeys);
     if (keys.length === 0) return null;
 
     for (let i = 0; i < keys.length; i++) {
@@ -123,7 +124,7 @@ Write the ultimate LinkedIn post on this topic.`;
 
   // 3. Anthropic Claude (claude-haiku-4-5-20251001)
   const tryClaude = async (): Promise<LinkedInPostOutput | null> => {
-    const anthropicKey = creds.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+    const anthropicKey = creds.anthropicApiKey || (creds.allowPlatformKeys ? process.env.ANTHROPIC_API_KEY : '');
     if (!anthropicKey) return null;
 
     try {

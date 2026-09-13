@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 import { createAdminClient } from '@/lib/supabase-server';
 import { DEFAULT_SYSTEM_PROMPT } from '@/lib/user-credentials';
+import { sendPlatformEmail } from '@/lib/email-service';
+import { renderOtpEmailTemplate } from '@/lib/email-templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,52 +36,15 @@ export async function POST(req: NextRequest) {
         phone: phone || undefined,
       });
 
-      // Dispatch 6-digit code via Brevo / SMTP
+      // Dispatch 6-digit code via Brevo / SMTP using branded White SaaS template
       try {
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-          port: Number(process.env.SMTP_PORT || 587),
-          secure: false,
-          auth: {
-            user: process.env.SMTP_USER || '',
-            pass: process.env.SMTP_PASS || '',
-          },
-        });
-
-        const htmlEmail = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #4f46e5, #3b82f6); padding: 28px 24px; text-align: center; color: #ffffff;">
-              <h1 style="margin: 0; font-size: 22px; font-weight: 800;">ReachOut AI</h1>
-              <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">One-Time Login Verification Code</p>
-            </div>
-
-            <div style="padding: 28px 24px; text-align: center; color: #1e293b;">
-              <p style="font-size: 14px; color: #475569; margin-top: 0;">
-                Use the 6-digit verification code below to securely access your ReachOut AI workspace:
-              </p>
-
-              <div style="margin: 24px auto; padding: 16px 28px; background: #f8fafc; border: 2px dashed #4f46e5; border-radius: 12px; display: inline-block;">
-                <span style="font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #4f46e5; font-family: monospace;">
-                  ${generatedCode}
-                </span>
-              </div>
-
-              <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-                This code expires in 10 minutes. If you did not request this login, please ignore this email.
-              </p>
-            </div>
-
-            <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px; text-align: center; font-size: 11px; color: #94a3b8;">
-              ReachOut AI • Multi-Tenant Autonomous Outreach Platform
-            </div>
-          </div>
-        `;
-
-        await transporter.sendMail({
-          from: '"ReachOut AI Auth" <yuvamk6@gmail.com>',
+        const htmlEmail = renderOtpEmailTemplate(generatedCode, cleanEmail);
+        await sendPlatformEmail({
           to: cleanEmail,
-          subject: `${generatedCode} is your ReachOut AI Login Code`,
+          fromName: 'ReachOut AI Security',
+          subject: `🔐 ${generatedCode} is your ReachOut AI verification code`,
           html: htmlEmail,
+          text: `Your ReachOut AI verification code is: ${generatedCode}. This code is valid for 10 minutes.`,
         });
       } catch (smtpErr) {
         console.warn('[OTP SMTP dispatch warning]:', smtpErr);

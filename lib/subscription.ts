@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-server';
-import nodemailer from 'nodemailer';
+import { sendPlatformEmail } from '@/lib/email-service';
+import { renderTaxInvoiceTemplate, renderAdminPaymentAlertTemplate } from '@/lib/email-templates';
 
 export * from './subscription-plans';
 import { SubscriptionStatus } from './subscription-plans';
@@ -171,88 +172,23 @@ export async function sendSubscriptionInvoiceEmail(
   }
 ) {
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || '',
-      },
+    const htmlContent = renderTaxInvoiceTemplate({
+      invoiceNumber: invoiceData.invoiceNumber,
+      orderId: invoiceData.orderId,
+      paymentId: invoiceData.paymentId,
+      planName: invoiceData.planName,
+      amount: invoiceData.amount,
+      userEmail,
+      billingDate: new Date().toLocaleDateString(),
+      validUntil: invoiceData.validUntil,
     });
 
-    const htmlContent = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 50%, #7c3aed 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
-          <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">ReachOut AI</h1>
-          <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.9;">Official Tax Invoice & Subscription Receipt</p>
-        </div>
-
-        <!-- Invoice Details -->
-        <div style="padding: 28px 24px; color: #1e293b;">
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px;">
-            <div>
-              <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Invoice Number</p>
-              <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 700; color: #0f172a; font-family: monospace;">${invoiceData.invoiceNumber}</p>
-            </div>
-            <div style="text-align: right;">
-              <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Payment Status</p>
-              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 2px 10px; border-radius: 9999px; display: inline-block;">PAID (₹ INR)</p>
-            </div>
-          </div>
-
-          <div style="margin-bottom: 20px;">
-            <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Billed To</p>
-            <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600; color: #0f172a;">${userEmail}</p>
-          </div>
-
-          <!-- Line Items Table -->
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px;">
-            <thead>
-              <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <th style="padding: 10px 12px; text-align: left; color: #475569;">Description</th>
-                <th style="padding: 10px 12px; text-align: right; color: #475569;">Valid Until</th>
-                <th style="padding: 10px 12px; text-align: right; color: #475569;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 14px 12px; font-weight: 600; color: #0f172a;">${invoiceData.planName}</td>
-                <td style="padding: 14px 12px; text-align: right; color: #64748b;">${new Date(invoiceData.validUntil).toLocaleDateString()}</td>
-                <td style="padding: 14px 12px; text-align: right; font-weight: 700; color: #0f172a;">₹${invoiceData.amount}</td>
-              </tr>
-              <tr>
-                <td colspan="2" style="padding: 12px; text-align: right; font-weight: 600; color: #64748b;">Total Paid:</td>
-                <td style="padding: 12px; text-align: right; font-weight: 800; font-size: 16px; color: #4f46e5;">₹${invoiceData.amount}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Transaction Reference -->
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; font-size: 11px; color: #64748b; font-family: monospace; margin-bottom: 24px;">
-            <p style="margin: 0 0 4px 0;"><strong>Razorpay Payment ID:</strong> ${invoiceData.paymentId}</p>
-            <p style="margin: 0;"><strong>Order ID:</strong> ${invoiceData.orderId}</p>
-          </div>
-
-          <div style="text-align: center;">
-            <a href="https://mail-sent-agent.onrender.com/leads" style="background: #4f46e5; color: #ffffff; padding: 12px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 13px; display: inline-block;">Open Dashboard & Launch Pipelines &rarr;</a>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 24px; text-align: center; font-size: 11px; color: #94a3b8;">
-          <p style="margin: 0;">ReachOut AI • Automated Career & Inbound Authority Platform</p>
-          <p style="margin: 4px 0 0 0;">Need support? Contact support@reachout-ai.com or reply to this email.</p>
-        </div>
-      </div>
-    `;
-
-    await transporter.sendMail({
-      from: '"ReachOut AI Billing" <yuvamk6@gmail.com>',
+    await sendPlatformEmail({
       to: userEmail,
-      subject: `🎉 Invoice ${invoiceData.invoiceNumber} - Your ReachOut AI Subscription is Active!`,
+      fromName: 'ReachOut AI Billing',
+      subject: `🎉 Tax Invoice ${invoiceData.invoiceNumber} - ReachOut AI Subscription Active`,
       html: htmlContent,
+      text: `Your payment of ₹${invoiceData.amount} for ${invoiceData.planName} was successful. Invoice #: ${invoiceData.invoiceNumber}, Payment ID: ${invoiceData.paymentId}.`,
     });
   } catch (err) {
     console.error('[sendSubscriptionInvoiceEmail] error:', err);
@@ -274,38 +210,21 @@ export async function sendAdminPaymentAlert(
 ) {
   try {
     const adminEmail = process.env.ADMIN_EMAIL || 'yuvamk6@gmail.com';
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || '',
-      },
+    const htmlContent = renderAdminPaymentAlertTemplate({
+      subscriberEmail: userEmail,
+      planName: invoiceData.planName,
+      amount: invoiceData.amount,
+      orderId: invoiceData.orderId,
+      paymentId: invoiceData.paymentId,
+      validUntil: new Date(Date.now() + 30 * 86400000).toLocaleDateString(),
     });
 
-    const htmlContent = `
-      <div style="font-family: sans-serif; max-width: 500px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-        <h2 style="color: #16a34a; margin-top: 0;">💰 New Subscription Received!</h2>
-        <p>A new customer has subscribed on ReachOut AI:</p>
-        <ul>
-          <li><strong>User Email:</strong> ${userEmail}</li>
-          <li><strong>Plan:</strong> ${invoiceData.planName}</li>
-          <li><strong>Amount Paid:</strong> ₹${invoiceData.amount} INR</li>
-          <li><strong>Invoice #:</strong> ${invoiceData.invoiceNumber}</li>
-          <li><strong>Razorpay Payment ID:</strong> ${invoiceData.paymentId}</li>
-          <li><strong>Order ID:</strong> ${invoiceData.orderId}</li>
-          <li><strong>Timestamp:</strong> ${new Date().toISOString()}</li>
-        </ul>
-        <p><a href="https://mail-sent-agent.onrender.com/admin" style="background: #4f46e5; color: #fff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: bold;">View in Admin Dashboard &rarr;</a></p>
-      </div>
-    `;
-
-    await transporter.sendMail({
-      from: '"ReachOut AI Alerts" <yuvamk6@gmail.com>',
+    await sendPlatformEmail({
       to: adminEmail,
-      subject: `🔔 Payment Alert: ₹${invoiceData.amount} from ${userEmail} (${invoiceData.planName})`,
+      fromName: 'ReachOut AI Revenue Bot',
+      subject: `🔔 New Revenue: ₹${invoiceData.amount} from ${userEmail} (${invoiceData.planName})`,
       html: htmlContent,
+      text: `New subscription payment received: ₹${invoiceData.amount} from ${userEmail} for ${invoiceData.planName}. Payment ID: ${invoiceData.paymentId}.`,
     });
   } catch (err) {
     console.error('[sendAdminPaymentAlert] error:', err);

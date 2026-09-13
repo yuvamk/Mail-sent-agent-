@@ -19,6 +19,7 @@ export interface UserDynamicCredentials {
   linkedinAccessToken: string;
   linkedinPersonUrn: string;
   isAdmin: boolean;
+  allowPlatformKeys: boolean;
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `You are a professional career outreach strategist writing cold job outreach emails to HR representatives or recruiters.
@@ -78,6 +79,7 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
     linkedinAccessToken: isPlatformAdmin ? (process.env.LINKEDIN_ACCESS_TOKEN || '') : '',
     linkedinPersonUrn: isPlatformAdmin ? (process.env.LINKEDIN_PERSON_URN || '') : '',
     isAdmin: isPlatformAdmin,
+    allowPlatformKeys: true,
   };
 
   if (!userId) return envDefaults;
@@ -92,18 +94,20 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
 
     if (!dbSettings) return envDefaults;
 
+    const allowPlatformKeys = isPlatformAdmin || (dbSettings.allow_platform_keys !== false);
+
     return {
       userId,
       customSystemPrompt: dbSettings.custom_system_prompt?.trim() || envDefaults.customSystemPrompt,
-      anthropicApiKey: dbSettings.anthropic_api_key?.trim() || envDefaults.anthropicApiKey,
-      geminiApiKey: dbSettings.gemini_api_key?.trim() || envDefaults.geminiApiKey,
-      groqApiKey: dbSettings.groq_api_key?.trim() || envDefaults.groqApiKey,
-      smtpHost: dbSettings.smtp_host?.trim() || envDefaults.smtpHost,
-      smtpPort: dbSettings.smtp_port ? parseInt(dbSettings.smtp_port, 10) : envDefaults.smtpPort,
-      smtpUser: dbSettings.smtp_user?.trim() || envDefaults.smtpUser,
-      smtpPass: dbSettings.smtp_pass?.trim() || envDefaults.smtpPass,
-      smtpFromEmail: dbSettings.smtp_from_email?.trim() || envDefaults.smtpFromEmail,
-      brevoApiKey: dbSettings.brevo_api_key?.trim() || envDefaults.brevoApiKey,
+      anthropicApiKey: dbSettings.anthropic_api_key?.trim() || (allowPlatformKeys ? envDefaults.anthropicApiKey : ''),
+      geminiApiKey: dbSettings.gemini_api_key?.trim() || (allowPlatformKeys ? envDefaults.geminiApiKey : ''),
+      groqApiKey: dbSettings.groq_api_key?.trim() || (allowPlatformKeys ? envDefaults.groqApiKey : ''),
+      smtpHost: dbSettings.smtp_host?.trim() || (allowPlatformKeys ? envDefaults.smtpHost : ''),
+      smtpPort: dbSettings.smtp_port ? parseInt(dbSettings.smtp_port, 10) : (allowPlatformKeys ? envDefaults.smtpPort : 587),
+      smtpUser: dbSettings.smtp_user?.trim() || (allowPlatformKeys ? envDefaults.smtpUser : ''),
+      smtpPass: dbSettings.smtp_pass?.trim() || (allowPlatformKeys ? envDefaults.smtpPass : ''),
+      smtpFromEmail: dbSettings.smtp_from_email?.trim() || (allowPlatformKeys ? envDefaults.smtpFromEmail : ''),
+      brevoApiKey: dbSettings.brevo_api_key?.trim() || (allowPlatformKeys ? envDefaults.brevoApiKey : ''),
       candidateName: dbSettings.candidate_name?.trim() || envDefaults.candidateName,
       candidatePhone: dbSettings.candidate_phone?.trim() || envDefaults.candidatePhone,
       githubUrl: dbSettings.github_url?.trim() || envDefaults.githubUrl,
@@ -111,6 +115,7 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
       linkedinAccessToken: dbSettings.linkedin_access_token?.trim() || envDefaults.linkedinAccessToken,
       linkedinPersonUrn: dbSettings.linkedin_person_urn?.trim() || envDefaults.linkedinPersonUrn,
       isAdmin: dbSettings.is_admin ?? envDefaults.isAdmin,
+      allowPlatformKeys,
     };
   } catch (e) {
     console.warn('Error fetching dynamic user credentials from DB, fallback to env:', e);

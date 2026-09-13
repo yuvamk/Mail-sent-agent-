@@ -46,11 +46,15 @@ function readEnvFileFallback(): Record<string, string> {
  * Returns all active Google Gemini keys in priority/pool order.
  * De-duplicates and preserves order.
  */
-export function getAvailableGeminiKeys(overrideKey?: string): string[] {
+export function getAvailableGeminiKeys(overrideKey?: string, allowPlatformFallback: boolean = true): string[] {
   const keys: string[] = [];
 
   if (overrideKey?.trim()) {
     keys.push(overrideKey.trim());
+  }
+
+  if (!allowPlatformFallback) {
+    return keys;
   }
 
   const fileEnv = readEnvFileFallback();
@@ -90,11 +94,16 @@ export function getAvailableGeminiKeys(overrideKey?: string): string[] {
 export async function executeWithGeminiRotation<T>(
   callback: (model: any, apiKey: string, modelName: string) => Promise<T>,
   preferredModel: string = 'gemini-flash-latest',
-  overrideKey?: string
+  overrideKey?: string,
+  allowPlatformFallback: boolean = true
 ): Promise<{ result: T; modelUsed: string; keyIndex: number }> {
-  const keys = getAvailableGeminiKeys(overrideKey);
+  const keys = getAvailableGeminiKeys(overrideKey, allowPlatformFallback);
   if (keys.length === 0) {
-    throw new Error('No Google Gemini API keys configured.');
+    throw new Error(
+      allowPlatformFallback
+        ? 'No Google Gemini API keys configured.'
+        : 'Your account requires you to provide your own Google Gemini API key. Please add it in Settings.'
+    );
   }
 
   const modelCandidates = [

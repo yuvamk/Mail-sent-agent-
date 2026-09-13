@@ -122,6 +122,30 @@ export async function POST(req: NextRequest) {
 
       if (error) throw error;
       return NextResponse.json({ success: true, message: 'VIP 1-Year Access Granted!', subscription: updated });
+    } else if (action === 'toggle_platform_keys') {
+      const allow = body.allowPlatformKeys !== undefined ? Boolean(body.allowPlatformKeys) : true;
+      const { data: updatedSettings, error } = await supabase
+        .from('user_settings')
+        .upsert(
+          {
+            user_id: targetUserId,
+            allow_platform_keys: allow,
+            updated_at: now.toISOString(),
+          },
+          { onConflict: 'user_id' }
+        )
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      return NextResponse.json({
+        success: true,
+        message: allow
+          ? 'Platform API Keys access enabled (user can use shared Gemini/Groq/SMTP pool)'
+          : 'Platform API Keys access disabled (user must supply their own API keys in Settings)',
+        allowPlatformKeys: allow,
+        settings: updatedSettings,
+      });
     }
 
     return NextResponse.json({ success: false, error: 'Unknown admin subscription action' }, { status: 400 });

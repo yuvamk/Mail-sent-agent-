@@ -32,6 +32,8 @@ import {
   Check,
   PlusCircle,
   Lock,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 
 interface UserBreakdown {
@@ -40,6 +42,7 @@ interface UserBreakdown {
   createdAt: string;
   lastSignInAt: string | null;
   isAdmin: boolean;
+  allowPlatformKeys?: boolean;
   candidateName: string | null;
   leadsCount: number;
   resumesCount: number;
@@ -106,6 +109,8 @@ export default function AdminDashboardPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'leads' | 'sent' | 'linkedin' | 'spend'>('newest');
   const [selectedUser, setSelectedUser] = useState<UserBreakdown | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [userToDelete, setUserToDelete] = useState<UserBreakdown | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   useEffect(() => {
     fetchAdminData();
@@ -182,6 +187,79 @@ export default function AdminDashboardPage() {
       setErrorMessage(err?.message || 'Admin action failed');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Toggle User's Platform API Keys Access
+  const handleTogglePlatformKeys = async (targetUserId: string, currentVal: boolean) => {
+    const nextVal = !currentVal;
+    setActionLoading(`${targetUserId}-keys`);
+    setActionSuccess(null);
+    setErrorMessage(null);
+
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch('/api/admin/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          targetUserId,
+          action: 'toggle_platform_keys',
+          allowPlatformKeys: nextVal,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update key access policy');
+      }
+
+      setActionSuccess(`✓ ${data.message}`);
+      await fetchAdminData();
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to update policy');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Permanently Delete User
+  const handlePermanentDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeletingUser(true);
+    setErrorMessage(null);
+
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch('/api/admin/users/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          targetUserId: userToDelete.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
+
+      setActionSuccess(`✓ ${data.message}`);
+      setUserToDelete(null);
+      if (selectedUser?.id === userToDelete.id) {
+        setSelectedUser(null);
+      }
+      await fetchAdminData();
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Deletion failed');
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -392,7 +470,9 @@ export default function AdminDashboardPage() {
                     <th className="p-4">Status</th>
                     <th className="p-4">Valid Until</th>
                     <th className="p-4">Amount Paid</th>
+                    <th className="p-4 text-center">API Key Access</th>
                     <th className="p-4 text-center">Admin Controls</th>
+                    <th className="p-4 text-center">Delete</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -408,7 +488,7 @@ export default function AdminDashboardPage() {
                     return (
                       <tr key={u.id} className="hover:bg-indigo-50/20 transition-colors">
                         <td className="p-4">
-                          <div className="font-bold text-slate-900 truncate max-w-[220px]" title={u.email}>
+                          <div className="font-bold text-slate-900 truncate max-w-[200px]" title={u.email}>
                             {u.email}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono">ID: {u.id.slice(0, 8)}...</div>
@@ -438,6 +518,32 @@ export default function AdminDashboardPage() {
 
                         <td className="p-4 font-bold text-slate-900">
                           ₹{sub.amount || 0}
+                        </td>
+
+                        <td className="p-4 text-center">
+                          {u.isAdmin ? (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              Admin Pool
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleTogglePlatformKeys(u.id, u.allowPlatformKeys !== false)}
+                              disabled={isBusy}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors flex items-center gap-1 mx-auto ${
+                                u.allowPlatformKeys !== false
+                                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                              }`}
+                              title={
+                                u.allowPlatformKeys !== false
+                                  ? 'User can use Platform Gemini/Groq/SMTP keys. Click to switch to BYOK Only.'
+                                  : 'User must supply their own API keys. Click to grant Platform keys access.'
+                              }
+                            >
+                              <Key className="w-3 h-3" />
+                              {u.allowPlatformKeys !== false ? 'Platform: ON' : 'BYOK Only'}
+                            </button>
+                          )}
                         </td>
 
                         <td className="p-4">
@@ -478,6 +584,21 @@ export default function AdminDashboardPage() {
                               VIP
                             </button>
                           </div>
+                        </td>
+
+                        <td className="p-4 text-center">
+                          {u.isAdmin ? (
+                            <span className="text-[10px] text-slate-400 font-semibold italic">Protected</span>
+                          ) : (
+                            <button
+                              onClick={() => setUserToDelete(u)}
+                              disabled={isBusy}
+                              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors mx-auto flex items-center justify-center"
+                              title="Permanently Delete User Account & All Data"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -548,7 +669,9 @@ export default function AdminDashboardPage() {
                     <th className="p-4 text-center">Mails Sent</th>
                     <th className="p-4 text-center">LinkedIn</th>
                     <th className="p-4">Integrations</th>
+                    <th className="p-4 text-center">API Key Access</th>
                     <th className="p-4">Joined Date</th>
+                    <th className="p-4 text-center">Delete</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -590,8 +713,47 @@ export default function AdminDashboardPage() {
                           </span>
                         </div>
                       </td>
+                      <td className="p-4 text-center">
+                        {u.isAdmin ? (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Admin Pool
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleTogglePlatformKeys(u.id, u.allowPlatformKeys !== false)}
+                            disabled={actionLoading?.startsWith(u.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors flex items-center gap-1 mx-auto ${
+                              u.allowPlatformKeys !== false
+                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                            }`}
+                            title={
+                              u.allowPlatformKeys !== false
+                                ? 'User can use Platform Gemini/Groq/SMTP keys. Click to switch to BYOK Only.'
+                                : 'User must supply their own API keys. Click to grant Platform keys access.'
+                            }
+                          >
+                            <Key className="w-3 h-3" />
+                            {u.allowPlatformKeys !== false ? 'Platform: ON' : 'BYOK Only'}
+                          </button>
+                        )}
+                      </td>
                       <td className="p-4 font-mono text-slate-500 text-[11px]">
                         {new Date(u.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 text-center">
+                        {u.isAdmin ? (
+                          <span className="text-[10px] text-slate-400 font-semibold italic">Protected</span>
+                        ) : (
+                          <button
+                            onClick={() => setUserToDelete(u)}
+                            disabled={actionLoading?.startsWith(u.id)}
+                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors mx-auto flex items-center justify-center"
+                            title="Permanently Delete User Account & All Data"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -634,6 +796,71 @@ export default function AdminDashboardPage() {
               <p className="font-bold text-emerald-700 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Razorpay INR Engine ({systemHealth.razorpay})
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PERMANENT USER DELETION CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Permanently Delete User?</h3>
+                <p className="text-xs text-slate-500">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
+              <p>
+                You are about to permanently purge user <strong className="text-slate-950 font-mono">{userToDelete.email}</strong> and completely delete all their associated records from Supabase:
+              </p>
+
+              <div className="p-3.5 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-1.5 font-medium text-slate-700 text-[11px]">
+                <div>&bull; <strong className="text-rose-900">{userToDelete.leadsCount}</strong> Recruiter Leads</div>
+                <div>&bull; <strong className="text-rose-900">{userToDelete.draftsCount}</strong> Email Drafts & Outreach History</div>
+                <div>&bull; <strong className="text-rose-900">{userToDelete.resumesCount}</strong> Uploaded Resumes</div>
+                <div>&bull; <strong className="text-rose-900">{userToDelete.linkedinDraftsCount}</strong> LinkedIn Posts & Radar Drafts</div>
+                <div>&bull; All Subscription & Settings Records</div>
+                <div>&bull; Permanent Authentication Account Purge</div>
+              </div>
+
+              <p className="text-[11px] text-rose-600 font-semibold">
+                ⚠️ Caution: The user will immediately lose all access and cannot recover their data.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                disabled={deletingUser}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePermanentDeleteUser}
+                disabled={deletingUser}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
+              >
+                {deletingUser ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Purging User Data...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Permanently
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

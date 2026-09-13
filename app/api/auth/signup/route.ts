@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { DEFAULT_SYSTEM_PROMPT } from '@/lib/user-credentials';
+import { sendPlatformEmail } from '@/lib/email-service';
+import { renderWelcomeEmailTemplate } from '@/lib/email-templates';
 
 export async function POST(req: NextRequest) {
   try {
@@ -99,6 +101,18 @@ export async function POST(req: NextRequest) {
           custom_system_prompt: DEFAULT_SYSTEM_PROMPT,
           updated_at: new Date().toISOString(),
         });
+        // Dispatch branded Welcome Onboarding email via platform Brevo SMTP
+        try {
+          const welcomeHtml = renderWelcomeEmailTemplate(name || 'Job Seeker', cleanEmail);
+          await sendPlatformEmail({
+            to: cleanEmail,
+            subject: '🚀 Welcome to ReachOut AI - Your Career Automation Platform',
+            html: welcomeHtml,
+            text: `Welcome to ReachOut AI, ${name || 'Job Seeker'}! Get started by uploading your resume and importing recruiter leads.`,
+          });
+        } catch (welcomeErr) {
+          console.warn('Welcome email dispatch notice:', welcomeErr);
+        }
       } catch (dbErr) {
         console.warn('Error setting up initial user_settings row:', dbErr);
       }
