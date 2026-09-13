@@ -5,6 +5,9 @@
 </p>
 
 <p align="center">
+  <a href="https://mail-sent-agent.onrender.com/" target="_blank">
+    <img src="https://img.shields.io/badge/🌐_Live_Deployment-mail--sent--agent.onrender.com-00E5FF?style=for-the-badge&logo=render&logoColor=white" alt="Live Platform" />
+  </a>
   <a href="https://github.com/yuvamk/Mail-sent-agent-"><img src="https://img.shields.io/github/stars/yuvamk/Mail-sent-agent-?style=for-the-badge&color=00E5FF&logo=github" alt="Stars" /></a>
   <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.3.4_Turbopack-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" /></a>
   <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-Postgres_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
@@ -12,6 +15,10 @@
   <a href="https://groq.com"><img src="https://img.shields.io/badge/Groq-Llama_3.3_70B-F55036?style=for-the-badge&logo=fastapi&logoColor=white" alt="Groq" /></a>
   <a href="https://linkedin.com"><img src="https://img.shields.io/badge/LinkedIn_API-v202608_REST-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
   <a href="https://brevo.com"><img src="https://img.shields.io/badge/Brevo-SMTP_%26_Webhooks-0B996F?style=for-the-badge&logo=mailgun&logoColor=white" alt="Brevo" /></a>
+</p>
+
+<p align="center">
+  🚀 <b>Live Production App:</b> <a href="https://mail-sent-agent.onrender.com/"><b>https://mail-sent-agent.onrender.com/</b></a>
 </p>
 
 ---
