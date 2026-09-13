@@ -477,21 +477,21 @@ export default function LinkedInStudioPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/20">
               <Linkedin className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2.5 flex-wrap">
                 LinkedIn AI Thought Leadership Studio
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-cyan-400" />
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-cyan-600" />
                   Gemini Flash (3-Key Auto-Rotation Pool)
                 </span>
               </h1>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-500">
                 Live Tech & AI News Radar: browse real-time stories, select an article, and let Gemini craft an insight-dense post with an exact matched visual.
               </p>
             </div>
@@ -502,20 +502,20 @@ export default function LinkedInStudioPage() {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowTokenModal(true)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border shadow-sm ${
               isConnected
-                ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300 hover:bg-emerald-900/50'
-                : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:border-slate-600'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
             {isConnected ? `Connected: ${profileName || 'LinkedIn'}` : 'Connect LinkedIn API'}
           </button>
 
           {isConnected && (
             <button
               onClick={handleDisconnect}
-              className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-red-950/60 hover:border-red-800 border border-slate-800 text-slate-400 hover:text-red-300 text-xs font-semibold transition-all"
+              className="px-3 py-2 rounded-xl bg-white hover:bg-red-50 hover:border-red-200 border border-slate-200 text-slate-500 hover:text-red-600 text-xs font-semibold transition-all shadow-sm"
               title="Disconnect LinkedIn Account"
             >
               Disconnect
@@ -525,9 +525,9 @@ export default function LinkedInStudioPage() {
           <button
             onClick={fetchNews}
             disabled={isFetchingNews}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 shadow-sm"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isFetchingNews ? 'animate-spin text-cyan-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetchingNews ? 'animate-spin text-cyan-600' : ''}`} />
             Refresh News
           </button>
         </div>
@@ -536,25 +536,25 @@ export default function LinkedInStudioPage() {
       {/* Toast Alert */}
       {statusMessage && (
         <div
-          className={`p-4 rounded-xl text-sm flex items-center justify-between border shadow-lg transition-all animate-in fade-in slide-in-from-top-2 ${
+          className={`p-4 rounded-xl text-sm flex items-center justify-between border shadow-sm transition-all animate-in fade-in slide-in-from-top-2 ${
             statusMessage.type === 'success'
-              ? 'bg-emerald-950/70 border-emerald-800 text-emerald-200'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : statusMessage.type === 'error'
-              ? 'bg-red-950/70 border-red-800 text-red-200'
-              : 'bg-blue-950/70 border-blue-800 text-blue-200'
+              ? 'bg-red-50 border-red-200 text-red-800'
+              : 'bg-blue-50 border-blue-200 text-blue-800'
           }`}
         >
           <div className="flex items-center gap-2.5">
             {statusMessage.type === 'success' ? (
-              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
             ) : statusMessage.type === 'error' ? (
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
             ) : (
-              <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+              <Sparkles className="w-4 h-4 text-cyan-600 shrink-0" />
             )}
             <span>{statusMessage.text}</span>
           </div>
-          <button onClick={() => setStatusMessage(null)} className="text-xs text-slate-400 hover:text-white">
+          <button onClick={() => setStatusMessage(null)} className="text-xs text-slate-400 hover:text-slate-700">
             ✕
           </button>
         </div>
@@ -563,42 +563,42 @@ export default function LinkedInStudioPage() {
       {/* ========================================================================= */}
       {/* STEP 1: RICH NEWS EXPLORER & STORY SELECTION */}
       {/* ========================================================================= */}
-      <section className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
+      <section className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 font-black text-xs flex items-center justify-center border border-cyan-500/40">
+              <span className="w-6 h-6 rounded-full bg-cyan-50 text-cyan-700 font-black text-xs flex items-center justify-center border border-cyan-200">
                 1
               </span>
-              <h2 className="text-base font-bold text-white flex items-center gap-2 flex-wrap">
-                <Newspaper className="w-4 h-4 text-cyan-400" />
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                <Newspaper className="w-4 h-4 text-cyan-600" />
                 Live Tech & AI News Feed
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/15 text-red-400 text-[10px] font-bold border border-red-500/30">
+                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
                   LIVE STORIES ({filteredArticles.length})
                 </span>
               </h2>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Live breaking news gathered from Google News RSS, Hacker News, and AI Research. Pick any live story below to draft your LinkedIn post.
             </p>
           </div>
 
           {/* Search Bar */}
           <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Filter stories by keyword..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white"
             />
           </div>
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-800/80">
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
           {[
             { name: 'All', icon: Layers },
             { name: 'AI & LLMs', icon: Cpu },
@@ -618,15 +618,15 @@ export default function LinkedInStudioPage() {
                 onClick={() => setActiveCategory(cat.name)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/20 font-bold'
-                    : 'bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800/80'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm font-bold'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{cat.name}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                   }`}
                 >
                   {count}
@@ -649,40 +649,40 @@ export default function LinkedInStudioPage() {
                 }}
                 className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
                   isSelected
-                    ? 'bg-slate-900 border-cyan-500 shadow-xl shadow-cyan-500/10 ring-1 ring-cyan-500/50'
-                    : 'bg-slate-950/70 hover:bg-slate-900 border-slate-800/90 hover:border-slate-700'
+                    ? 'bg-blue-50/70 border-cyan-500 shadow-sm ring-1 ring-cyan-500/50'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 shadow-sm'
                 }`}
               >
                 <div>
                   {/* Category & Source Badges */}
                   <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-cyan-300 truncate max-w-[120px]">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-cyan-700 truncate max-w-[120px]">
                       {art.sourceName}
                     </span>
-                    <span className="text-[10px] text-slate-500 shrink-0">
+                    <span className="text-[10px] text-slate-400 shrink-0">
                       {art.category}
                     </span>
                   </div>
 
                   {/* Headline */}
-                  <h3 className="text-xs font-bold text-slate-100 group-hover:text-cyan-200 line-clamp-2 leading-relaxed">
+                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-cyan-700 line-clamp-2 leading-relaxed">
                     {art.title}
                   </h3>
 
                   {/* Full Summary */}
-                  <p className="text-[11px] text-slate-400 mt-2 line-clamp-3 leading-relaxed">
+                  <p className="text-[11px] text-slate-500 mt-2 line-clamp-3 leading-relaxed">
                     {art.summary}
                   </p>
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                   <a
                     href={art.sourceUrl}
                     target="_blank"
                     rel="noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] text-slate-500 hover:text-cyan-400 flex items-center gap-1"
+                    className="text-[10px] text-slate-400 hover:text-cyan-600 flex items-center gap-1"
                   >
                     Read article <ExternalLink className="w-2.5 h-2.5" />
                   </a>
@@ -695,8 +695,8 @@ export default function LinkedInStudioPage() {
                     }}
                     className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
                       isSelected
-                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                        ? 'bg-cyan-500 text-white shadow-sm'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                     }`}
                   >
                     {isSelected ? (
@@ -705,7 +705,7 @@ export default function LinkedInStudioPage() {
                       </>
                     ) : (
                       <>
-                        <Wand2 className="w-3 h-3 text-cyan-400" /> Draft Post
+                        <Wand2 className="w-3 h-3 text-cyan-600" /> Draft Post
                       </>
                     )}
                   </button>
@@ -717,19 +717,19 @@ export default function LinkedInStudioPage() {
 
         {/* Selected Story Action Bar */}
         {selectedArticle && (
-          <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 shrink-0">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-800">
                   Ready to draft post for:
                 </span>
-                <p className="text-xs font-bold text-white truncate max-w-xl">
+                <p className="text-xs font-bold text-slate-900 truncate max-w-xl">
                   {selectedArticle.title}
                 </p>
-                <p className="text-[11px] text-slate-400 truncate">
+                <p className="text-[11px] text-slate-500 truncate">
                   Source: {selectedArticle.sourceName} • {selectedArticle.category}
                 </p>
               </div>
@@ -740,7 +740,7 @@ export default function LinkedInStudioPage() {
               <select
                 value={tone}
                 onChange={(e: any) => setTone(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none"
+                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
               >
                 <option value="thought-leader">Thought Leader Tone</option>
                 <option value="technical">Deep Technical Tone</option>
@@ -750,7 +750,7 @@ export default function LinkedInStudioPage() {
               <select
                 value={aiProvider}
                 onChange={(e: any) => setAiProvider(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none"
+                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
               >
                 <option value="gemini">Google Gemini (gemini-flash-latest)</option>
                 <option value="groq">Groq (groq/compound)</option>
@@ -760,16 +760,16 @@ export default function LinkedInStudioPage() {
               <button
                 onClick={() => handleGeneratePost()}
                 disabled={isGenerating}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer shrink-0"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-600/20 disabled:opacity-50 cursor-pointer shrink-0"
               >
                 {isGenerating ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
                     Analyzing Story & Crafting Post...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 text-slate-950" />
+                    <Sparkles className="w-4 h-4 text-cyan-200" />
                     Generate Post & Matched Visual
                   </>
                 )}
@@ -780,65 +780,65 @@ export default function LinkedInStudioPage() {
 
         {/* Live Generation Progress Bar & Model HUD */}
         {isGenerating && (
-          <div className="p-5 rounded-3xl bg-slate-950 border border-cyan-500/50 shadow-2xl shadow-cyan-500/10 space-y-4 animate-in fade-in slide-in-from-top-3">
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-cyan-50/70 border border-cyan-200 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-cyan-600 shrink-0">
                   <Sparkles className="w-5 h-5 animate-spin" />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-white">
+                    <span className="text-xs font-bold text-slate-900">
                       AI Generation in Progress
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-200">
                       Model: {aiProvider === 'gemini' ? 'gemini-flash-latest' : aiProvider}
                     </span>
-                    <span className="text-[10px] font-mono text-emerald-400 font-semibold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span className="text-[10px] font-mono text-emerald-600 font-semibold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                       3-Key Pool Active
                     </span>
                   </div>
-                  <p className="text-xs text-cyan-200 mt-1 font-medium flex items-center gap-1.5">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400 shrink-0" />
+                  <p className="text-xs text-cyan-800 mt-1 font-medium flex items-center gap-1.5">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-600 shrink-0" />
                     {generationStatusText || 'Harvesting research story & drafting post...'}
                   </p>
                 </div>
               </div>
 
               <div className="text-right shrink-0">
-                <span className="font-mono text-sm font-black text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-500/30">
+                <span className="font-mono text-sm font-black text-cyan-700 bg-white px-2.5 py-1 rounded-lg border border-cyan-200 shadow-sm">
                   {generationProgress}%
                 </span>
               </div>
             </div>
 
             {/* Animated Progress Bar */}
-            <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-800 relative">
+            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden border border-slate-300 relative">
               <div
-                className="bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500 relative"
+                className="bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 h-full rounded-full transition-all duration-500 relative"
                 style={{ width: `${generationProgress}%` }}
               >
-                <div className="absolute inset-0 bg-white/25 animate-pulse"></div>
+                <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
               </div>
             </div>
 
             {/* Multi-Step Pipeline Indicator */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] font-medium text-slate-400">
-              <div className={`flex items-center gap-1.5 ${generationProgress >= 20 ? 'text-cyan-300 font-bold' : ''}`}>
-                <span className={`w-2 h-2 rounded-full ${generationProgress >= 20 ? 'bg-cyan-400' : 'bg-slate-700'}`}></span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] font-medium text-slate-500">
+              <div className={`flex items-center gap-1.5 ${generationProgress >= 20 ? 'text-cyan-700 font-bold' : ''}`}>
+                <span className={`w-2 h-2 rounded-full ${generationProgress >= 20 ? 'bg-cyan-600' : 'bg-slate-300'}`}></span>
                 <span>1. News Scan</span>
               </div>
-              <div className={`flex items-center gap-1.5 ${generationProgress >= 45 ? 'text-cyan-300 font-bold' : ''}`}>
-                <span className={`w-2 h-2 rounded-full ${generationProgress >= 45 ? 'bg-cyan-400' : 'bg-slate-700'}`}></span>
+              <div className={`flex items-center gap-1.5 ${generationProgress >= 45 ? 'text-cyan-700 font-bold' : ''}`}>
+                <span className={`w-2 h-2 rounded-full ${generationProgress >= 45 ? 'bg-cyan-600' : 'bg-slate-300'}`}></span>
                 <span>2. Gemini Post Draft</span>
               </div>
-              <div className={`flex items-center gap-1.5 ${generationProgress >= 75 ? 'text-cyan-300 font-bold' : ''}`}>
-                <span className={`w-2 h-2 rounded-full ${generationProgress >= 75 ? 'bg-cyan-400' : 'bg-slate-700'}`}></span>
+              <div className={`flex items-center gap-1.5 ${generationProgress >= 75 ? 'text-cyan-700 font-bold' : ''}`}>
+                <span className={`w-2 h-2 rounded-full ${generationProgress >= 75 ? 'bg-cyan-600' : 'bg-slate-300'}`}></span>
                 <span>3. Visual Prompting</span>
               </div>
-              <div className={`flex items-center gap-1.5 ${generationProgress >= 95 ? 'text-cyan-300 font-bold' : ''}`}>
-                <span className={`w-2 h-2 rounded-full ${generationProgress >= 95 ? 'bg-cyan-400' : 'bg-slate-700'}`}></span>
+              <div className={`flex items-center gap-1.5 ${generationProgress >= 95 ? 'text-cyan-700 font-bold' : ''}`}>
+                <span className={`w-2 h-2 rounded-full ${generationProgress >= 95 ? 'bg-cyan-600' : 'bg-slate-300'}`}></span>
                 <span>4. 3 Styles Render</span>
               </div>
             </div>
@@ -852,21 +852,21 @@ export default function LinkedInStudioPage() {
       <div id="post-review-studio" className="space-y-4 pt-2">
         {/* Live Published Success Notification Bar */}
         {currentPost?.status === 'posted' && (
-          <div className="p-4 sm:p-5 rounded-3xl bg-emerald-950/40 border border-emerald-500/50 shadow-2xl shadow-emerald-500/10 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+          <div className="p-4 sm:p-5 rounded-3xl bg-emerald-50 border border-emerald-300 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold text-lg shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center justify-center font-bold text-lg shrink-0">
                 ✓
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm text-emerald-200">
+                  <h3 className="font-bold text-sm text-emerald-900">
                     🎉 Post Successfully Published to LinkedIn!
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
                     LIVE ON FEED
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 mt-0.5">
+                <p className="text-xs text-slate-600 mt-0.5">
                   Your post and matched image are now visible to your connections on LinkedIn ({profileName || 'LinkedIn User'}).
                 </p>
               </div>
@@ -878,7 +878,7 @@ export default function LinkedInStudioPage() {
                   href={currentPost.linkedin_post_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all"
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> View Live on LinkedIn
                 </a>
@@ -888,11 +888,11 @@ export default function LinkedInStudioPage() {
         )}
 
         <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 font-black text-xs flex items-center justify-center border border-blue-500/40">
+          <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200">
             2
           </span>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <Share2 className="w-4 h-4 text-blue-400" />
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Share2 className="w-4 h-4 text-blue-600" />
             Review Post & Matched Visual
           </h2>
         </div>
@@ -900,9 +900,9 @@ export default function LinkedInStudioPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Post Copy & Image Controls (6 cols) */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                   Editable Post Content
                 </span>
                 <span className="text-xs text-slate-400 font-mono">{postContent.length} chars</span>
@@ -910,20 +910,20 @@ export default function LinkedInStudioPage() {
 
               {/* Active AI Model Info Pill */}
               {postContent && (
-                <div className="p-3 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="p-3 rounded-2xl bg-cyan-50/80 border border-cyan-200 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    <span className="font-bold text-white">Drafted by Google Gemini</span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                    <span className="font-bold text-slate-900">Drafted by Google Gemini</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-800 border border-cyan-200">
                       gemini-flash-latest
                     </span>
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span className="text-[10px] text-emerald-600 font-mono flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                       3-Key Pool
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400">
-                    Tone: <strong className="text-slate-200 capitalize">{tone.replace('-', ' ')}</strong>
+                  <span className="text-[11px] text-slate-500">
+                    Tone: <strong className="text-slate-800 capitalize">{tone.replace('-', ' ')}</strong>
                   </span>
                 </div>
               )}
@@ -935,23 +935,23 @@ export default function LinkedInStudioPage() {
                   value={postContent}
                   onChange={(e) => setPostContent(e.target.value)}
                   placeholder="Select any story above and click 'Generate Post & Matched Visual' to generate your post..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs text-slate-200 leading-relaxed placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-sans"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-900 leading-relaxed placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white font-sans"
                 />
               </div>
 
               {/* Image Pipeline & Selection Bar */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-600" />
                     Gemini Image Generation:
                   </span>
                   <button
                     onClick={handleRegenerateVisualWithGemini}
                     disabled={isRegeneratingVisual || !postContent.trim()}
-                    className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/40 border border-cyan-500/30 transition-all disabled:opacity-50 cursor-pointer"
+                    className="text-[11px] font-bold text-cyan-700 hover:text-cyan-800 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    <RefreshCw className={`w-3 h-3 ${isRegeneratingVisual ? 'animate-spin text-cyan-400' : ''}`} />
+                    <RefreshCw className={`w-3 h-3 ${isRegeneratingVisual ? 'animate-spin text-cyan-600' : ''}`} />
                     {isRegeneratingVisual ? 'Gemini Designing...' : 'Regenerate with Gemini'}
                   </button>
                 </div>
@@ -966,8 +966,8 @@ export default function LinkedInStudioPage() {
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                       selectedStyle === 'editorial'
-                        ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30'
-                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        ? 'bg-blue-600 text-white font-bold shadow-sm'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-sm'
                     }`}
                   >
                     <Sparkles className="w-3 h-3 text-cyan-300" /> 📸 Gemini Photo-Editorial
@@ -981,8 +981,8 @@ export default function LinkedInStudioPage() {
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         selectedStyle === 'isometric'
-                          ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30'
-                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                          ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                          : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-sm'
                       }`}
                     >
                       <Cpu className="w-3 h-3 text-indigo-300" /> 🧊 Gemini 3D Isometric
@@ -997,8 +997,8 @@ export default function LinkedInStudioPage() {
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         selectedStyle === 'vector'
-                          ? 'bg-cyan-600 text-slate-950 font-bold shadow-md shadow-cyan-600/30'
-                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                          ? 'bg-cyan-600 text-white font-bold shadow-sm'
+                          : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-sm'
                       }`}
                     >
                       <Code2 className="w-3 h-3 text-cyan-300" /> 🎨 Gemini Tech Vector
@@ -1013,26 +1013,26 @@ export default function LinkedInStudioPage() {
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         selectedStyle === 'news'
-                          ? 'bg-amber-600 text-white font-bold shadow-md shadow-amber-600/30'
-                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                          ? 'bg-amber-600 text-white font-bold shadow-sm'
+                          : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-sm'
                       }`}
                     >
-                      <Newspaper className="w-3 h-3 text-amber-400" /> 📰 Original News Photo
+                      <Newspaper className="w-3 h-3 text-amber-500" /> 📰 Original News Photo
                     </button>
                   )}
                 </div>
 
                 {/* Gemini Visual Direction Description */}
                 {visualPrompt && (
-                  <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800/80 text-[11px] text-slate-300 space-y-1">
+                  <div className="p-3 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-700 space-y-1 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-cyan-300 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-cyan-400" />
+                      <span className="font-bold text-cyan-700 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-cyan-600" />
                         Gemini Visual Direction (Matched to Post Lines):
                       </span>
-                      <span className="text-[10px] text-slate-500 font-mono">gemini-flash-latest</span>
+                      <span className="text-[10px] text-slate-400 font-mono">gemini-flash-latest</span>
                     </div>
-                    <p className="text-slate-400 leading-relaxed italic">
+                    <p className="text-slate-600 leading-relaxed italic">
                       "{visualPrompt}"
                     </p>
                   </div>
@@ -1044,7 +1044,7 @@ export default function LinkedInStudioPage() {
                 <button
                   onClick={handlePublish}
                   disabled={isPublishing || !postContent.trim()}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 cursor-pointer"
+                  className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {isPublishing ? (
                     <>
@@ -1060,9 +1060,9 @@ export default function LinkedInStudioPage() {
                 <button
                   onClick={handleCopy}
                   disabled={!postContent.trim()}
-                  className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  className="py-3 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                 >
-                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                   {copied ? 'Copied!' : 'Copy Post'}
                 </button>
               </div>
@@ -1072,18 +1072,18 @@ export default function LinkedInStudioPage() {
           {/* Right Column: Live LinkedIn Mockup Card (6 cols) */}
           <div className="lg:col-span-6 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Live LinkedIn Feed Mockup
               </span>
-              <span className="text-[11px] text-slate-500">Real-time mobile/desktop preview</span>
+              <span className="text-[11px] text-slate-400">Real-time mobile/desktop preview</span>
             </div>
 
             {/* LinkedIn Card */}
-            <div className="rounded-3xl bg-white text-slate-900 border border-slate-200 overflow-hidden shadow-2xl">
+            <div className="rounded-3xl bg-white text-slate-900 border border-slate-200 overflow-hidden shadow-sm">
               {/* Profile Bar */}
               <div className="p-4 flex items-center justify-between border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
                     {profileName ? profileName.slice(0, 2).toUpperCase() : <User className="w-5 h-5" />}
                   </div>
                   <div>
@@ -1118,13 +1118,13 @@ export default function LinkedInStudioPage() {
 
               {/* Matched Visual Image */}
               {imageUrl && (
-                <div className="w-full bg-slate-900 relative group overflow-hidden border-y border-slate-200">
+                <div className="w-full bg-slate-100 relative group overflow-hidden border-y border-slate-200">
                   <img
                     src={imageUrl}
                     alt="Post Visual"
                     className="w-full h-72 object-cover object-center transition-transform duration-300 group-hover:scale-105"
                   />
-                  <div className="absolute bottom-2 right-2 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] text-white flex items-center gap-1.5">
+                  <div className="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] text-white flex items-center gap-1.5 shadow-sm">
                     <ImageIcon className="w-3 h-3 text-cyan-300" />
                     <span>Visual Matched to Post</span>
                   </div>
@@ -1164,26 +1164,26 @@ export default function LinkedInStudioPage() {
       {/* ========================================================================= */}
       {/* SECTION 3: RECENT POSTS ARCHIVE TABLE */}
       {/* ========================================================================= */}
-      <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+      <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Clock className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-cyan-600" />
               Past Thought Leadership Posts
             </h3>
-            <p className="text-xs text-slate-400">All drafted, approved, and live posts on your account</p>
+            <p className="text-xs text-slate-500">All drafted, approved, and live posts on your account</p>
           </div>
-          <span className="text-xs text-slate-500">{pastPosts.length} posts recorded</span>
+          <span className="text-xs text-slate-400">{pastPosts.length} posts recorded</span>
         </div>
 
         {pastPosts.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-xs rounded-2xl bg-slate-950/40 border border-slate-800/60">
+          <div className="p-8 text-center text-slate-400 text-xs rounded-2xl bg-slate-50 border border-slate-200">
             No posts generated yet. Select any story above to draft your first post!
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="p-3">Topic</th>
                   <th className="p-3">Attached Visual</th>
@@ -1192,38 +1192,38 @@ export default function LinkedInStudioPage() {
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {pastPosts.map((post) => (
-                  <tr key={post.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="p-3 font-medium text-slate-200 max-w-sm">
-                      <div className="truncate font-semibold text-white">{post.topic}</div>
-                      <div className="truncate text-slate-400 text-[11px]">{post.post_content.slice(0, 75)}...</div>
+                  <tr key={post.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3 font-medium text-slate-900 max-w-sm">
+                      <div className="truncate font-semibold text-slate-900">{post.topic}</div>
+                      <div className="truncate text-slate-500 text-[11px]">{post.post_content.slice(0, 75)}...</div>
                     </td>
                     <td className="p-3">
                       {post.image_url ? (
                         <img
                           src={post.image_url}
                           alt="Thumbnail"
-                          className="w-14 h-9 object-cover rounded-lg border border-slate-700"
+                          className="w-14 h-9 object-cover rounded-lg border border-slate-200 shadow-sm"
                         />
                       ) : (
-                        <span className="text-slate-600 text-[10px]">No image</span>
+                        <span className="text-slate-400 text-[10px]">No image</span>
                       )}
                     </td>
                     <td className="p-3 text-center">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           post.status === 'posted'
-                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : post.status === 'failed'
-                            ? 'bg-red-950 text-red-400 border border-red-800'
-                            : 'bg-amber-950 text-amber-400 border border-amber-800'
+                            ? 'bg-red-50 text-red-700 border border-red-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}
                       >
                         {post.status.toUpperCase()}
                       </span>
                     </td>
-                    <td className="p-3 text-slate-400 text-[11px]">
+                    <td className="p-3 text-slate-500 text-[11px]">
                       {new Date(post.created_at).toLocaleDateString()}
                     </td>
                     <td className="p-3 text-right space-x-2">
@@ -1235,7 +1235,7 @@ export default function LinkedInStudioPage() {
                           const studioElement = document.getElementById('post-review-studio');
                           if (studioElement) studioElement.scrollIntoView({ behavior: 'smooth' });
                         }}
-                        className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-semibold transition-colors"
+                        className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-colors"
                       >
                         Edit / Review
                       </button>
@@ -1244,7 +1244,7 @@ export default function LinkedInStudioPage() {
                           href={post.linkedin_post_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-blue-950 hover:bg-blue-900 text-blue-300 text-[11px] font-semibold transition-colors"
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-semibold transition-colors"
                         >
                           View <ExternalLink className="w-2.5 h-2.5" />
                         </a>
@@ -1260,37 +1260,37 @@ export default function LinkedInStudioPage() {
 
       {/* Modal: Connect LinkedIn Access Token */}
       {showTokenModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
                   <Linkedin className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-white text-base">LinkedIn Account Settings</h3>
+                <h3 className="font-bold text-slate-900 text-base">LinkedIn Account Settings</h3>
               </div>
               <button
                 onClick={() => setShowTokenModal(false)}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-slate-400 hover:text-slate-700 text-sm"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               {isConnected ? (
                 <>
-                  Your personal profile <strong className="text-emerald-400">{profileName || 'LinkedIn User'}</strong> is connected with <code className="bg-slate-950 px-1.5 py-0.5 rounded text-cyan-300">w_member_social</code> scope. You can update your token below or disconnect.
+                  Your personal profile <strong className="text-emerald-600">{profileName || 'LinkedIn User'}</strong> is connected with <code className="bg-slate-100 px-1.5 py-0.5 rounded text-cyan-700">w_member_social</code> scope. You can update your token below or disconnect.
                 </>
               ) : (
                 <>
-                  Connect your personal LinkedIn profile to enable 1-click publishing. Enter your LinkedIn OAuth Access Token with <code className="bg-slate-950 px-1.5 py-0.5 rounded text-cyan-300">w_member_social</code> permission.
+                  Connect your personal LinkedIn profile to enable 1-click publishing. Enter your LinkedIn OAuth Access Token with <code className="bg-slate-100 px-1.5 py-0.5 rounded text-cyan-700">w_member_social</code> permission.
                 </>
               )}
             </p>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-400">
+              <label className="text-xs font-semibold text-slate-700">
                 {isConnected ? 'Replace LinkedIn Access Token:' : 'LinkedIn Access Token:'}
               </label>
               <textarea
@@ -1298,7 +1298,7 @@ export default function LinkedInStudioPage() {
                 value={tokenInput}
                 onChange={(e) => setTokenInput(e.target.value)}
                 placeholder="AQX..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-mono focus:outline-none focus:border-cyan-500 focus:bg-white"
               />
             </div>
 
@@ -1306,7 +1306,7 @@ export default function LinkedInStudioPage() {
               <button
                 onClick={handleSaveToken}
                 disabled={isSavingToken || !tokenInput.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-sm"
               >
                 {isSavingToken ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
                 {isConnected ? 'Update Token' : 'Connect Account'}
@@ -1317,14 +1317,14 @@ export default function LinkedInStudioPage() {
                     setShowTokenModal(false);
                     handleDisconnect();
                   }}
-                  className="py-2.5 px-3 rounded-xl bg-red-950/60 hover:bg-red-900/60 border border-red-800 text-red-300 text-xs font-semibold transition-colors"
+                  className="py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold transition-colors"
                 >
                   Disconnect
                 </button>
               )}
               <button
                 onClick={() => setShowTokenModal(false)}
-                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
               >
                 Close
               </button>
@@ -1335,46 +1335,46 @@ export default function LinkedInStudioPage() {
 
       {/* Modal: Celebratory Post Successfully Published to LinkedIn */}
       {showSuccessModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-emerald-500/50 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl shadow-emerald-500/20 space-y-6 relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-emerald-200 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-100 rounded-full blur-3xl pointer-events-none"></div>
 
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-2xl shadow-lg shadow-emerald-500/25 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl shadow-sm shrink-0">
                   🎉
                 </div>
                 <div>
-                  <h3 className="font-black text-white text-lg sm:text-xl leading-tight">
+                  <h3 className="font-black text-slate-900 text-lg sm:text-xl leading-tight">
                     Post Published to LinkedIn!
                   </h3>
-                  <p className="text-xs text-emerald-300 font-medium mt-0.5">
+                  <p className="text-xs text-emerald-700 font-medium mt-0.5">
                     Live on your profile and visible to your network
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowSuccessModal(false)}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-slate-400 hover:text-slate-700 text-sm"
               >
                 ✕
               </button>
             </div>
 
             {/* Post Summary Details */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
-              <div className="flex items-center justify-between text-xs border-b border-slate-800/80 pb-2">
-                <span className="text-slate-400">Author Account:</span>
-                <span className="font-bold text-white">{profileName || 'Your Profile'}</span>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+              <div className="flex items-center justify-between text-xs border-b border-slate-100 pb-2">
+                <span className="text-slate-500">Author Account:</span>
+                <span className="font-bold text-slate-900">{profileName || 'Your Profile'}</span>
               </div>
-              <div className="flex items-center justify-between text-xs border-b border-slate-800/80 pb-2">
-                <span className="text-slate-400">Story Topic:</span>
-                <span className="font-bold text-cyan-300 truncate max-w-[240px]">{currentPost?.topic}</span>
+              <div className="flex items-center justify-between text-xs border-b border-slate-100 pb-2">
+                <span className="text-slate-500">Story Topic:</span>
+                <span className="font-bold text-cyan-700 truncate max-w-[240px]">{currentPost?.topic}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Feed Status:</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="text-slate-500">Feed Status:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                   LIVE ON LINKEDIN
                 </span>
               </div>
@@ -1387,7 +1387,7 @@ export default function LinkedInStudioPage() {
                   href={publishedPostUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all"
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
                 >
                   <ExternalLink className="w-4 h-4" /> View Live Post on LinkedIn
                 </a>
@@ -1399,13 +1399,13 @@ export default function LinkedInStudioPage() {
                     showStatus('success', 'LinkedIn post URL copied!');
                   }
                 }}
-                className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                className="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Copy className="w-3.5 h-3.5" /> Copy Post Link
               </button>
               <button
                 onClick={() => setShowSuccessModal(false)}
-                className="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-semibold text-xs transition-colors"
+                className="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
               >
                 Done
               </button>

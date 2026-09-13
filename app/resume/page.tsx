@@ -121,14 +121,14 @@ export default function ResumePage() {
   const activeResume = resumes.find((r) => r.is_active);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8 font-sans pb-16">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-          <FileText className="w-7 h-7 text-indigo-400" /> Resume Manager
+        <h1 className="text-2xl font-black text-slate-950 flex items-center gap-3">
+          <FileText className="w-7 h-7 text-indigo-600" /> Resume Knowledge Base
         </h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Upload your resume PDF. The raw text is extracted and cached to provide context for AI cold email drafting, and the original PDF is automatically attached to outgoing SMTP emails.
+        <p className="text-xs sm:text-sm text-slate-600 mt-1">
+          Upload your resume PDF. The raw text is extracted to provide context for AI cold email drafting, and the original PDF is automatically attached to outgoing SMTP emails.
         </p>
       </div>
 
@@ -136,12 +136,12 @@ export default function ResumePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Upload Box */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5 shadow-xl">
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <Upload className="w-4 h-4 text-indigo-400" /> Upload New Resume
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-5 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Upload className="w-4 h-4 text-indigo-600" /> Upload New Resume
             </h2>
 
-            <div className="p-6 rounded-xl bg-slate-950 border border-dashed border-slate-700 text-center space-y-3">
+            <div className="p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-indigo-200 text-center space-y-3">
               <input
                 type="file"
                 id="resume-pdf-input"
@@ -152,14 +152,15 @@ export default function ResumePage() {
 
               <label
                 htmlFor="resume-pdf-input"
-                className="cursor-pointer block text-xs text-slate-300 hover:text-white"
+                className="cursor-pointer block text-xs text-slate-600 hover:text-slate-900"
               >
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto mb-2">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-2">
                   <FileText className="w-6 h-6" />
                 </div>
-                <span className="font-medium text-slate-200">
+                <span className="font-bold text-slate-800">
                   {selectedFile ? selectedFile.name : 'Click to select PDF file'}
                 </span>
+                <p className="text-[10px] text-slate-400 mt-1">Maximum 5 MB (.pdf only)</p>
               </label>
 
               {selectedFile && (
@@ -167,7 +168,7 @@ export default function ResumePage() {
                   onClick={handleUpload}
                   disabled={uploading}
                   id="btn-upload-resume"
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:opacity-95 text-white text-xs font-bold shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                 >
                   {uploading ? (
                     <>
@@ -180,50 +181,74 @@ export default function ResumePage() {
               )}
             </div>
 
-            {error && <p className="text-xs text-red-400 font-medium">{error}</p>}
-            {successMsg && <p className="text-xs text-emerald-400 font-medium">{successMsg}</p>}
+            {error && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {error}
+              </div>
+            )}
+            {successMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                {successMsg}
+              </div>
+            )}
           </div>
 
           {/* Uploaded Resumes List */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-slate-300">Resume Version History</h3>
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-xs">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Version History</h3>
 
             {loading ? (
-              <div className="flex items-center gap-2 text-xs text-slate-400 py-4">
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" /> Loading resume list...
+              <div className="flex items-center gap-2 text-xs text-slate-500 py-4">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> Loading resume list...
               </div>
             ) : resumes.length === 0 ? (
-              <p className="text-xs text-slate-500 italic py-4">No resumes uploaded yet.</p>
+              <p className="text-xs text-slate-400 italic py-4">No resumes uploaded yet.</p>
             ) : (
               <div className="space-y-2">
                 {resumes.map((r) => (
                   <div
                     key={r.id}
-                    className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                    className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs ${
                       r.is_active
-                        ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-200'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-indigo-50/70 border-indigo-200 text-slate-900 font-medium'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="overflow-hidden pr-2">
-                      <p className="text-xs font-medium truncate text-slate-200">{r.file_name}</p>
+                    <div className="truncate pr-2">
+                      <p className="font-bold text-slate-900 truncate" title={r.file_name}>
+                        {r.file_name}
+                      </p>
                       <p className="text-[10px] text-slate-500">
                         {new Date(r.uploaded_at).toLocaleDateString()}
                       </p>
                     </div>
 
-                    {r.is_active ? (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center gap-1 shrink-0">
-                        <Star className="w-3 h-3 fill-emerald-400" /> Active
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleSetActive(r.id)}
-                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium shrink-0 transition-colors"
-                      >
-                        Set Active
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {r.is_active ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
+                          Active
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleSetActive(r.id)}
+                          className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-[10px] font-semibold"
+                        >
+                          Make Active
+                        </button>
+                      )}
+
+                      {r.extracted_text && (
+                        <button
+                          onClick={() => setActiveTextPreview(r.extracted_text)}
+                          className="p-1 rounded-lg hover:bg-white text-slate-500 hover:text-indigo-600 transition-colors"
+                          title="Preview Extracted Text"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -231,33 +256,52 @@ export default function ResumePage() {
           </div>
         </div>
 
-        {/* Right Column: Active Resume Text Extracted Preview */}
+        {/* Right Column: Active Resume & Extracted Skills */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-base font-semibold text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-cyan-400" /> Extracted Text Context (Used by Claude/Gemini)
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  This text is parsed from your active resume PDF and passed into the AI prompt for matching skills.
-                </p>
+          <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-base font-bold text-slate-950">Active Resume Knowledge Context</h2>
               </div>
               {activeResume && (
-                <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
-                  {activeResume.file_name}
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Ready for AI Prompts
                 </span>
               )}
             </div>
 
             {activeResume ? (
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 font-mono text-xs text-slate-300 max-h-[500px] overflow-y-auto leading-relaxed whitespace-pre-wrap">
-                {activeResume.extracted_text || 'No text extracted from PDF.'}
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-mono text-indigo-600 uppercase font-bold">Active Resume File</span>
+                    <p className="font-bold text-slate-900 text-sm">{activeResume.file_name}</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTextPreview(activeResume.extracted_text)}
+                    className="px-3 py-1.5 rounded-xl bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold shadow-xs transition-colors"
+                  >
+                    View Parsed Text
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Extracted Text Preview:
+                  </label>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed font-mono whitespace-pre-line max-h-96 overflow-y-auto">
+                    {activeResume.extracted_text || 'No text extracted.'}
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="p-12 text-center text-slate-500 space-y-2">
-                <AlertCircle className="w-8 h-8 text-slate-600 mx-auto" />
-                <p className="text-xs">No active resume available. Upload a PDF on the left panel.</p>
+              <div className="p-8 text-center text-slate-500 space-y-2">
+                <FileUp className="w-8 h-8 text-slate-400 mx-auto" />
+                <p className="text-xs">No active resume selected.</p>
+                <p className="text-[11px] text-slate-400">
+                  Upload a PDF resume on the left to inject your real skills into personalized cold pitches.
+                </p>
               </div>
             )}
           </div>

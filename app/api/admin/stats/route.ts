@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
       usageRes,
       settingsRes,
       linkedinAccountsRes,
+      subscriptionsRes,
     ] = await Promise.all([
       supabase.from('leads').select('id, user_id, imported_at, company'),
       supabase.from('email_drafts').select('id, user_id, status, created_at, sent_at'),
@@ -75,6 +76,7 @@ export async function GET(req: NextRequest) {
       supabase.from('api_usage_logs').select('id, user_id, provider, total_tokens, estimated_cost_inr, created_at'),
       supabase.from('user_settings').select('user_id, is_admin, gemini_api_key, groq_api_key, anthropic_api_key, smtp_host, smtp_pass, brevo_api_key, linkedin_access_token, candidate_name, updated_at'),
       supabase.from('linkedin_accounts').select('user_id, is_connected, profile_name, updated_at'),
+      supabase.from('user_subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
 
     const leads = leadsRes.data || [];
@@ -84,6 +86,7 @@ export async function GET(req: NextRequest) {
     const usageLogs = usageRes.data || [];
     const settings = settingsRes.data || [];
     const linkedinAccounts = linkedinAccountsRes.data || [];
+    const subscriptions = (subscriptionsRes as any)?.data || [];
 
     // Create lookup maps for fast aggregation
     const settingsMap = new Map<string, any>();
@@ -136,6 +139,8 @@ export async function GET(req: NextRequest) {
         hasLinkedIn: Boolean(uLinkedInAccount?.is_connected || uSetting?.linkedin_access_token?.trim()),
       };
 
+      const uSub = subscriptions.find((s: any) => s.user_id === u.id);
+
       return {
         id: u.id,
         email: u.email || 'Anonymous',
@@ -152,6 +157,12 @@ export async function GET(req: NextRequest) {
         spendINR: Number(uSpend.toFixed(2)),
         totalTokens: uTokens,
         integrations,
+        subscription: uSub || {
+          plan_name: isUserPlatformAdmin ? 'Admin VIP' : 'Free Trial',
+          status: isUserPlatformAdmin ? 'active' : 'trial',
+          current_period_end: new Date(Date.now() + 3 * 86400000).toISOString(),
+          amount: 0,
+        },
         recentLeads: uLeads.slice(0, 5),
         recentPosts: uPosts.slice(0, 5),
       };
@@ -160,6 +171,12 @@ export async function GET(req: NextRequest) {
     // Sort users by activity / creation
     userBreakdowns.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+    // Subscription & Revenue Metrics
+    const totalSubscriptionRevenue = subscriptions.reduce((sum: number, s: any) => sum + (Number(s.amount) || 0), 0);
+    const activeSubscribersCount = subscriptions.filter((s: any) => s.status === 'active').length;
+    const expiredSubscribersCount = subscriptions.filter((s: any) => s.status === 'expired').length;
+    const expiringSoonSubscribersCount = subscriptions.filter((s: any) => s.status === 'expiring_soon').length;
+
     // System Health Status
     const systemHealth = {
       database: 'connected',
@@ -167,6 +184,7 @@ export async function GET(req: NextRequest) {
       groqFailover: 'ready',
       smtpRelay: 'configured',
       linkedinApiVersion: 'v202608',
+      razorpay: 'configured',
       checkedAt: new Date().toISOString(),
     };
 
@@ -182,9 +200,14 @@ export async function GET(req: NextRequest) {
         totalResumesUploaded,
         totalSpendINR: Number(totalSpendINR.toFixed(2)),
         totalTokensUsed,
+        totalSubscriptionRevenue,
+        activeSubscribersCount,
+        expiredSubscribersCount,
+        expiringSoonSubscribersCount,
       },
       systemHealth,
       users: userBreakdowns,
+      subscriptions,
     });
   } catch (err: any) {
     console.error('Admin stats route error:', err);

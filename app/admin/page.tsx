@@ -28,7 +28,10 @@ import {
   Sparkles,
   ArrowUpRight,
   Clock,
-  LogOut,
+  CreditCard,
+  Check,
+  PlusCircle,
+  Lock,
 } from 'lucide-react';
 
 interface UserBreakdown {
@@ -54,6 +57,14 @@ interface UserBreakdown {
     hasBrevo: boolean;
     hasLinkedIn: boolean;
   };
+  subscription?: {
+    plan_name: string;
+    status: string;
+    current_period_end: string;
+    amount: number;
+    invoice_number?: string;
+    razorpay_payment_id?: string;
+  };
   recentLeads: Array<{ id: string; company: string; imported_at: string }>;
   recentPosts: Array<{ id: string; topic: string; status: string; created_at: string }>;
 }
@@ -68,6 +79,10 @@ interface AdminStats {
   totalResumesUploaded: number;
   totalSpendINR: number;
   totalTokensUsed: number;
+  totalSubscriptionRevenue: number;
+  activeSubscribersCount: number;
+  expiredSubscribersCount: number;
+  expiringSoonSubscribersCount: number;
 }
 
 export default function AdminDashboardPage() {
@@ -81,11 +96,16 @@ export default function AdminDashboardPage() {
   const [users, setUsers] = useState<UserBreakdown[]>([]);
   const [systemHealth, setSystemHealth] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // Admin Active Tab: 'subscriptions' | 'users' | 'system'
+  const [adminTab, setAdminTab] = useState<'subscriptions' | 'users' | 'system'>('subscriptions');
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'leads' | 'sent' | 'linkedin' | 'spend'>('newest');
   const [selectedUser, setSelectedUser] = useState<UserBreakdown | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAdminData();
@@ -93,6 +113,7 @@ export default function AdminDashboardPage() {
 
   const fetchAdminData = async () => {
     setIsRefreshing(true);
+    setActionSuccess(null);
     try {
       const { data: { session } } = await supabaseBrowser.auth.getSession();
       if (!session?.user) {
@@ -100,48 +121,81 @@ export default function AdminDashboardPage() {
         return;
       }
 
-      setCurrentUserEmail(session.user.email || 'Admin');
+      setCurrentUserEmail(session.user.email || null);
 
-      const res = await fetch(`/api/admin/stats?userId=${session.user.id}`, {
+      const res = await fetch('/api/admin/stats', {
         headers: {
-          Authorization: `Bearer ${session.access_token || ''}`,
-          'x-user-id': session.user.id,
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
       const data = await res.json();
 
-      if (res.status === 403 || res.status === 401 || !data.success) {
+      if (!res.ok || !data.success) {
         setIsAuthorized(false);
-        setErrorMessage(data.error || 'Access Denied: Administrator permissions required.');
-        setLoading(false);
-        return;
+        setErrorMessage(data.error || 'Access denied: Admin authorization required.');
+      } else {
+        setIsAuthorized(true);
+        setStats(data.stats);
+        setUsers(data.users || []);
+        setSystemHealth(data.systemHealth || {});
       }
-
-      setIsAuthorized(true);
-      setStats(data.stats);
-      setUsers(data.users || []);
-      setSystemHealth(data.systemHealth);
     } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to connect to admin telemetry');
       setIsAuthorized(false);
-      setErrorMessage(err.message || 'Failed to authenticate admin session');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
   };
 
-  // Filtered & Sorted Users
+  // Perform Admin Subscription Override
+  const handleSubscriptionAction = async (targetUserId: string, action: string, days?: number, newStatus?: string) => {
+    setActionLoading(`${targetUserId}-${action}`);
+    setActionSuccess(null);
+    setErrorMessage(null);
+
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch('/api/admin/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          targetUserId,
+          action,
+          days,
+          newStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Action failed');
+      }
+
+      setActionSuccess(`✓ ${data.message}`);
+      await fetchAdminData();
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Admin action failed');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
-    let result = users.filter((u) => {
-      const q = searchQuery.toLowerCase().trim();
-      if (!q) return true;
-      return (
-        u.email.toLowerCase().includes(q) ||
-        u.id.toLowerCase().includes(q) ||
-        (u.candidateName && u.candidateName.toLowerCase().includes(q))
+    let result = [...users];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (u) =>
+          u.email.toLowerCase().includes(q) ||
+          (u.candidateName && u.candidateName.toLowerCase().includes(q)) ||
+          u.id.toLowerCase().includes(q)
       );
-    });
+    }
 
     if (sortBy === 'leads') {
       result.sort((a, b) => b.leadsCount - a.leadsCount);
@@ -158,520 +212,429 @@ export default function AdminDashboardPage() {
     return result;
   }, [users, searchQuery, sortBy]);
 
-  // Loading State
   if (loading) {
     return (
-      <div className="min-h-[75vh] flex flex-col items-center justify-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center animate-pulse shadow-xl shadow-rose-500/20">
-          <ShieldAlert className="w-7 h-7 text-white" />
-        </div>
-        <div className="text-center space-y-1">
-          <p className="text-base font-bold text-white">Verifying Admin Access Credentials...</p>
-          <p className="text-xs text-slate-500">Checking multi-tenant administrative privileges</p>
-        </div>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
+        <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
+        <p className="text-xs font-bold text-slate-700">Connecting to ReachOut AI Admin Control Center...</p>
       </div>
     );
   }
 
-  // Unauthorized Access Screen
   if (!isAuthorized) {
     return (
-      <div className="min-h-[75vh] flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full p-8 rounded-3xl bg-slate-900 border border-red-900/60 shadow-2xl space-y-6">
-          <div className="w-16 h-16 rounded-2xl bg-red-950/80 border border-red-800 text-red-400 flex items-center justify-center mx-auto shadow-lg shadow-red-950/50">
-            <ShieldAlert className="w-8 h-8" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-white">Administrator Access Required</h1>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {errorMessage || 'This control center is strictly restricted to platform administrators. Your current account does not have admin permissions.'}
-            </p>
-            {currentUserEmail && (
-              <p className="text-[11px] font-mono text-slate-500 bg-slate-950 p-2 rounded-xl border border-slate-800">
-                Logged in as: {currentUserEmail}
-              </p>
-            )}
-          </div>
-          <div className="pt-2 flex flex-col gap-2.5">
-            <Link
-              href="/leads"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/20"
-            >
-              Return to Your Dashboard
-            </Link>
-            <Link
-              href="/login"
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
-            >
-              Sign in with Admin Account
-            </Link>
-          </div>
+      <div className="max-w-md mx-auto my-20 p-8 rounded-3xl bg-white border border-slate-200 shadow-xl text-center space-y-5">
+        <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+          <ShieldAlert className="w-7 h-7" />
         </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-black text-slate-950">Administrator Access Required</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            {errorMessage || 'This control center is restricted to authorized platform administrators.'}
+          </p>
+        </div>
+        <Link
+          href="/leads"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-xs hover:bg-indigo-700 transition-colors"
+        >
+          Return to Dashboard
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-20 animate-in fade-in duration-300">
-      {/* Admin Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+    <div className="max-w-7xl mx-auto space-y-8 pb-16 font-sans">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-rose-500/25">
-              <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2.5 flex-wrap">
-                System Administration & Control Center
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-rose-400" />
-                  Live Platform Management
-                </span>
-              </h1>
-              <p className="text-sm text-slate-400">
-                Global overview of all registered users, multi-tenant resource utilization, cold email volumes, and LinkedIn automation.
-              </p>
-            </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold uppercase tracking-wider mb-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-rose-600" /> Superadmin Mission Control
           </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950">Platform Governance & Payments</h1>
+          <p className="text-xs sm:text-sm text-slate-600 mt-1">
+            Real-time subscriber management, Razorpay billing revenue, and multi-tenant telemetry.
+          </p>
         </div>
 
-        {/* Admin Controls */}
         <div className="flex items-center gap-3">
-          <div className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-slate-400">Admin:</span>
-            <strong className="text-white font-mono text-[11px]">{currentUserEmail}</strong>
-          </div>
-
           <button
             onClick={fetchAdminData}
             disabled={isRefreshing}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
-            Refresh Data
+            <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh Telemetry
           </button>
         </div>
       </div>
 
-      {/* KPI Cards Row */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {/* Card 1: Total Users */}
-          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400">Total Users</span>
-              <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black text-white">{stats.totalRegisteredUsers}</div>
-            <p className="text-[11px] text-slate-500">Registered Supabase accounts</p>
-          </div>
-
-          {/* Card 2: Leads Ingested */}
-          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400">Total Leads</span>
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
-                <FileSpreadsheet className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black text-white">{stats.totalLeads.toLocaleString()}</div>
-            <p className="text-[11px] text-slate-500">From uploaded spreadsheets</p>
-          </div>
-
-          {/* Card 3: Sent Outreach Emails */}
-          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400">Emails Sent</span>
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-                <Send className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black text-emerald-400">{stats.totalEmailsSent.toLocaleString()}</div>
-            <p className="text-[11px] text-slate-500">
-              {stats.totalDraftsCreated.toLocaleString()} drafts generated
-            </p>
-          </div>
-
-          {/* Card 4: LinkedIn Posts */}
-          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400">LinkedIn Published</span>
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
-                <Linkedin className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black text-indigo-300">{stats.totalLinkedInPostsPublished}</div>
-            <p className="text-[11px] text-slate-500">
-              {stats.totalLinkedInPostsDrafted} posts created
-            </p>
-          </div>
-
-          {/* Card 5: Platform Token Spend */}
-          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400">Total Spend</span>
-              <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
-                <DollarSign className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black text-amber-300">₹{stats.totalSpendINR.toFixed(2)}</div>
-            <p className="text-[11px] text-slate-500">
-              {(stats.totalTokensUsed / 1000).toFixed(1)}k AI tokens processed
-            </p>
-          </div>
+      {/* Action Notification */}
+      {actionSuccess && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{actionSuccess}</span>
         </div>
       )}
 
-      {/* System Infrastructure Health Bar */}
-      {systemHealth && (
-        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-2 font-bold text-slate-300">
-            <Server className="w-4 h-4 text-cyan-400" />
-            Infrastructure Status:
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Supabase Postgres RLS: <strong className="text-white">Active</strong>
-            </div>
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Gemini Flash Pool: <strong className="text-white">3 Keys Loaded</strong>
-            </div>
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Groq Failover: <strong className="text-white">Ready</strong>
-            </div>
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              LinkedIn REST API: <strong className="text-white">v202608</strong>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Admin Section Tabs */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold">
+        <button
+          onClick={() => setAdminTab('subscriptions')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
+            adminTab === 'subscriptions'
+              ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80 font-bold'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <CreditCard className="w-4 h-4 text-indigo-600" />
+          <span>Subscribers & Razorpay Payments</span>
+          {stats && (
+            <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-mono">
+              ₹{stats.totalSubscriptionRevenue}
+            </span>
+          )}
+        </button>
 
-      {/* Users Management Section */}
-      <section className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-cyan-400" />
-              Registered User Directory & Resource Usage
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-cyan-300 text-xs font-mono font-bold">
-                {filteredUsers.length} Users
-              </span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Detailed tracking of which user is using which services (Leads, Resumes, Cold Outreach, LinkedIn Studio, API Tokens).
-            </p>
+        <button
+          onClick={() => setAdminTab('users')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
+            adminTab === 'users'
+              ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80 font-bold'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-4 h-4 text-indigo-600" />
+          <span>Registered Users ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('system')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
+            adminTab === 'system'
+              ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80 font-bold'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Server className="w-4 h-4 text-indigo-600" />
+          <span>System Health & API Routing</span>
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: SUBSCRIBERS & RAZORPAY PAYMENTS */}
+      {/* ========================================================================= */}
+      {adminTab === 'subscriptions' && stats && (
+        <div className="space-y-6">
+          {/* Revenue KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Total Subscription Revenue</span>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-700 flex items-center gap-1.5">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
+                ₹{stats.totalSubscriptionRevenue.toLocaleString()}
+              </div>
+              <p className="text-[11px] text-slate-500">Collected via Razorpay INR</p>
+            </div>
+
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Active Paid Subscribers</span>
+              <div className="text-2xl sm:text-3xl font-black text-indigo-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-6 h-6 text-indigo-600" />
+                {stats.activeSubscribersCount}
+              </div>
+              <p className="text-[11px] text-slate-500">Full pipeline access enabled</p>
+            </div>
+
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Expiring Soon (&le; 3 Days)</span>
+              <div className="text-2xl sm:text-3xl font-black text-amber-700 flex items-center gap-1.5">
+                <Clock className="w-6 h-6 text-amber-600" />
+                {stats.expiringSoonSubscribersCount}
+              </div>
+              <p className="text-[11px] text-slate-500">Amber warning banner active</p>
+            </div>
+
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Expired Subscriptions</span>
+              <div className="text-2xl sm:text-3xl font-black text-rose-700 flex items-center gap-1.5">
+                <Lock className="w-6 h-6 text-rose-600" />
+                {stats.expiredSubscribersCount}
+              </div>
+              <p className="text-[11px] text-slate-500">Automated lock & paywall active</p>
+            </div>
           </div>
 
-          {/* Search & Sort Filter */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          {/* Subscriber Management Table */}
+          <div className="rounded-3xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-950">Subscriber Control Center</h3>
+                <p className="text-xs text-slate-500">
+                  Override access, grant trial extensions, or force subscription activation/lockout in real time.
+                </p>
+              </div>
               <input
                 type="text"
-                placeholder="Search user email or UUID..."
+                placeholder="Search subscriber email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 w-full sm:w-64 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
-            <select
-              value={sortBy}
-              onChange={(e: any) => setSortBy(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-            >
-              <option value="newest">Sort: Newest First</option>
-              <option value="leads">Sort: Most Leads</option>
-              <option value="sent">Sort: Most Emails Sent</option>
-              <option value="linkedin">Sort: Most LinkedIn Posts</option>
-              <option value="spend">Sort: Highest Spend (₹)</option>
-            </select>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="p-4">Subscriber</th>
+                    <th className="p-4">Plan Name</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Valid Until</th>
+                    <th className="p-4">Amount Paid</th>
+                    <th className="p-4 text-center">Admin Controls</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {filteredUsers.map((u) => {
+                    const sub = u.subscription || {
+                      plan_name: u.isAdmin ? 'Admin VIP' : 'Free Trial',
+                      status: u.isAdmin ? 'active' : 'trial',
+                      current_period_end: new Date().toISOString(),
+                      amount: 0,
+                    };
+                    const isBusy = actionLoading?.startsWith(u.id);
+
+                    return (
+                      <tr key={u.id} className="hover:bg-indigo-50/20 transition-colors">
+                        <td className="p-4">
+                          <div className="font-bold text-slate-900 truncate max-w-[220px]" title={u.email}>
+                            {u.email}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">ID: {u.id.slice(0, 8)}...</div>
+                        </td>
+
+                        <td className="p-4 font-semibold text-slate-800">{sub.plan_name}</td>
+
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              sub.status === 'active' || u.isAdmin
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : sub.status === 'expiring_soon'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : sub.status === 'trial'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}
+                          >
+                            {u.isAdmin ? 'VIP ADMIN' : sub.status}
+                          </span>
+                        </td>
+
+                        <td className="p-4 font-mono text-slate-600 text-[11px]">
+                          {u.isAdmin ? 'Lifetime' : new Date(sub.current_period_end).toLocaleDateString()}
+                        </td>
+
+                        <td className="p-4 font-bold text-slate-900">
+                          ₹{sub.amount || 0}
+                        </td>
+
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => handleSubscriptionAction(u.id, 'extend', 30)}
+                              disabled={isBusy}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-colors"
+                              title="Extend plan by 30 days"
+                            >
+                              +30 Days
+                            </button>
+
+                            <button
+                              onClick={() => handleSubscriptionAction(u.id, 'set_status', undefined, 'active')}
+                              disabled={isBusy}
+                              className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition-colors"
+                              title="Force set status to Active"
+                            >
+                              Activate
+                            </button>
+
+                            <button
+                              onClick={() => handleSubscriptionAction(u.id, 'set_status', undefined, 'expired')}
+                              disabled={isBusy}
+                              className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition-colors"
+                              title="Force set status to Expired (Locks services)"
+                            >
+                              Expire
+                            </button>
+
+                            <button
+                              onClick={() => handleSubscriptionAction(u.id, 'grant_vip')}
+                              disabled={isBusy}
+                              className="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[11px] font-bold transition-colors"
+                              title="Grant 1-Year VIP Access"
+                            >
+                              VIP
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Users Table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-800">
-          <table className="w-full text-left text-xs text-slate-300 border-collapse">
-            <thead>
-              <tr className="bg-slate-950/80 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                <th className="p-3.5">User Identity</th>
-                <th className="p-3.5">Joined Date</th>
-                <th className="p-3.5 text-center">Leads</th>
-                <th className="p-3.5 text-center">Resumes</th>
-                <th className="p-3.5 text-center">Emails Sent</th>
-                <th className="p-3.5 text-center">LinkedIn</th>
-                <th className="p-3.5 text-right">Spend (₹)</th>
-                <th className="p-3.5 text-center">Active Keys</th>
-                <th className="p-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-500 text-xs">
-                    No users matching "{searchQuery}" found.
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
-                    {/* User Column */}
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                          u.isAdmin ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-300'
-                        }`}>
-                          {u.email[0]?.toUpperCase() || 'U'}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-white truncate max-w-[180px]" title={u.email}>
-                              {u.email}
-                            </span>
-                            {u.isAdmin && (
-                              <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[9px] font-bold">
-                                ADMIN
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] font-mono text-slate-500 truncate max-w-[180px]" title={u.id}>
-                            {u.candidateName ? `${u.candidateName} • ` : ''}{u.id.substring(0, 13)}...
-                          </div>
-                        </div>
-                      </div>
-                    </td>
+      {/* ========================================================================= */}
+      {/* TAB 2: REGISTERED USERS & WORKSPACES */}
+      {/* ========================================================================= */}
+      {adminTab === 'users' && stats && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Total Registered Users</span>
+              <div className="text-2xl sm:text-3xl font-black text-slate-950">{stats.totalRegisteredUsers}</div>
+              <p className="text-[11px] text-slate-500">Unique tenant workspaces</p>
+            </div>
 
-                    {/* Joined Date */}
-                    <td className="p-3.5 text-slate-400 text-[11px] whitespace-nowrap">
-                      {new Date(u.createdAt).toLocaleDateString()}
-                    </td>
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Leads Ingested</span>
+              <div className="text-2xl sm:text-3xl font-black text-indigo-700">{stats.totalLeads}</div>
+              <p className="text-[11px] text-slate-500">Across all uploaded sheets</p>
+            </div>
 
-                    {/* Leads Count */}
-                    <td className="p-3.5 text-center">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-cyan-300 font-mono font-bold">
-                        {u.leadsCount}
-                      </span>
-                    </td>
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Outreach Mails Sent</span>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-700">{stats.totalEmailsSent}</div>
+              <p className="text-[11px] text-slate-500">Delivered via Brevo SMTP</p>
+            </div>
 
-                    {/* Resumes */}
-                    <td className="p-3.5 text-center">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono font-bold">
-                        {u.resumesCount}
-                      </span>
-                    </td>
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">LinkedIn Posts Published</span>
+              <div className="text-2xl sm:text-3xl font-black text-blue-700">{stats.totalLinkedInPostsPublished}</div>
+              <p className="text-[11px] text-slate-500">Live via LinkedIn API v202608</p>
+            </div>
+          </div>
 
-                    {/* Emails Sent */}
-                    <td className="p-3.5 text-center">
-                      <span className={`px-2 py-0.5 rounded-md font-mono font-bold ${
-                        u.sentCount > 0 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60' : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {u.sentCount}
-                      </span>
-                    </td>
+          {/* User Details Table */}
+          <div className="rounded-3xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 className="text-base font-bold text-slate-950">Tenant Breakdown</h3>
+              <div className="flex items-center gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none"
+                >
+                  <option value="newest">Sort by Newest</option>
+                  <option value="leads">Sort by Leads</option>
+                  <option value="sent">Sort by Emails Sent</option>
+                  <option value="linkedin">Sort by LinkedIn Posts</option>
+                  <option value="spend">Sort by Token Spend</option>
+                </select>
+              </div>
+            </div>
 
-                    {/* LinkedIn Posts */}
-                    <td className="p-3.5 text-center">
-                      <span className={`px-2 py-0.5 rounded-md font-mono font-bold ${
-                        u.linkedinPostedCount > 0 ? 'bg-indigo-950 text-indigo-300 border border-indigo-800/60' : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {u.linkedinPostedCount} / {u.linkedinDraftsCount}
-                      </span>
-                    </td>
-
-                    {/* Spend INR */}
-                    <td className="p-3.5 text-right font-mono font-bold text-amber-300">
-                      ₹{u.spendINR.toFixed(2)}
-                    </td>
-
-                    {/* Configured Keys / Integrations */}
-                    <td className="p-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span
-                          title={u.integrations.hasGemini ? 'Gemini Key Configured' : 'No Gemini Key'}
-                          className={`w-2 h-2 rounded-full ${u.integrations.hasGemini ? 'bg-blue-400' : 'bg-slate-700'}`}
-                        />
-                        <span
-                          title={u.integrations.hasGroq ? 'Groq Key Configured' : 'No Groq Key'}
-                          className={`w-2 h-2 rounded-full ${u.integrations.hasGroq ? 'bg-orange-400' : 'bg-slate-700'}`}
-                        />
-                        <span
-                          title={u.integrations.hasSmtp ? 'SMTP Configured' : 'No SMTP'}
-                          className={`w-2 h-2 rounded-full ${u.integrations.hasSmtp ? 'bg-emerald-400' : 'bg-slate-700'}`}
-                        />
-                        <span
-                          title={u.integrations.hasBrevo ? 'Brevo Key Configured' : 'No Brevo Key'}
-                          className={`w-2 h-2 rounded-full ${u.integrations.hasBrevo ? 'bg-teal-400' : 'bg-slate-700'}`}
-                        />
-                        <span
-                          title={u.integrations.hasLinkedIn ? 'LinkedIn Connected' : 'No LinkedIn Token'}
-                          className={`w-2 h-2 rounded-full ${u.integrations.hasLinkedIn ? 'bg-indigo-400' : 'bg-slate-700'}`}
-                        />
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="p-3.5 text-right">
-                      <button
-                        onClick={() => setSelectedUser(u)}
-                        className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-semibold transition-colors flex items-center gap-1.5 ml-auto"
-                      >
-                        <Eye className="w-3 h-3" />
-                        Inspect
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="p-4">User</th>
+                    <th className="p-4 text-center">Leads</th>
+                    <th className="p-4 text-center">Mails Sent</th>
+                    <th className="p-4 text-center">LinkedIn</th>
+                    <th className="p-4">Integrations</th>
+                    <th className="p-4">Joined Date</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {filteredUsers.map((u) => (
+                    <tr key={u.id} className="hover:bg-indigo-50/20 transition-colors">
+                      <td className="p-4">
+                        <div className="font-bold text-slate-900 truncate max-w-[200px]" title={u.email}>
+                          {u.email}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {u.candidateName || 'Name unset'}
+                        </div>
+                      </td>
+                      <td className="p-4 text-center font-bold text-slate-900">{u.leadsCount}</td>
+                      <td className="p-4 text-center font-bold text-emerald-700">{u.sentCount}</td>
+                      <td className="p-4 text-center font-bold text-blue-700">{u.linkedinPostedCount}</td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-mono ${
+                              u.integrations.hasGemini ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            Gemini
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-mono ${
+                              u.integrations.hasSmtp ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            SMTP
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-mono ${
+                              u.integrations.hasLinkedIn ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            LI
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-4 font-mono text-slate-500 text-[11px]">
+                        {new Date(u.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </section>
+      )}
 
-      {/* Modal: User Inspection Drawer */}
-      {selectedUser && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-slate-800">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold text-white">{selectedUser.email}</h3>
-                  {selectedUser.isAdmin && (
-                    <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
-                      ADMIN
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">UUID: {selectedUser.id}</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Registered: {new Date(selectedUser.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="text-slate-400 hover:text-white text-sm"
-              >
-                ✕
-              </button>
+      {/* ========================================================================= */}
+      {/* TAB 3: SYSTEM HEALTH */}
+      {/* ========================================================================= */}
+      {adminTab === 'system' && systemHealth && (
+        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <h3 className="text-base font-bold text-slate-950 flex items-center gap-2">
+            <Server className="w-4 h-4 text-indigo-600" /> System Infrastructure Health
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-[10px] uppercase font-bold">Postgres Database</span>
+              <p className="font-bold text-emerald-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {systemHealth.database}
+              </p>
             </div>
-
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Leads</span>
-                <span className="text-lg font-black text-cyan-400">{selectedUser.leadsCount}</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Sent Emails</span>
-                <span className="text-lg font-black text-emerald-400">{selectedUser.sentCount}</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">LinkedIn Posts</span>
-                <span className="text-lg font-black text-indigo-400">
-                  {selectedUser.linkedinPostedCount} / {selectedUser.linkedinDraftsCount}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Token Spend</span>
-                <span className="text-lg font-black text-amber-300">₹{selectedUser.spendINR.toFixed(2)}</span>
-              </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-[10px] uppercase font-bold">Google Gemini Pool</span>
+              <p className="font-bold text-indigo-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" /> {systemHealth.geminiPool}
+              </p>
             </div>
-
-            {/* Configured Services Checklist */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                User Configured Credentials & Services
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {[
-                  { label: 'Google Gemini Key', active: selectedUser.integrations.hasGemini },
-                  { label: 'Groq Cloud Key', active: selectedUser.integrations.hasGroq },
-                  { label: 'Anthropic Claude', active: selectedUser.integrations.hasAnthropic },
-                  { label: 'Custom SMTP Server', active: selectedUser.integrations.hasSmtp },
-                  { label: 'Brevo API Delivery', active: selectedUser.integrations.hasBrevo },
-                  { label: 'LinkedIn OAuth Token', active: selectedUser.integrations.hasLinkedIn },
-                ].map((item, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
-                      item.active
-                        ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-500'
-                    }`}
-                  >
-                    {item.active ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    ) : (
-                      <XCircle className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    )}
-                    <span className="truncate text-[11px] font-semibold">{item.label}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-[10px] uppercase font-bold">LinkedIn REST API</span>
+              <p className="font-bold text-blue-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" /> Version {systemHealth.linkedinApiVersion}
+              </p>
             </div>
-
-            {/* Recent Leads Activity */}
-            {selectedUser.recentLeads.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Recent Ingested Leads
-                </h4>
-                <div className="space-y-1.5">
-                  {selectedUser.recentLeads.map((l) => (
-                    <div
-                      key={l.id}
-                      className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
-                    >
-                      <span className="font-semibold text-white">{l.company || 'Unknown Company'}</span>
-                      <span className="text-[10px] text-slate-500">
-                        {new Date(l.imported_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Recent LinkedIn Activity */}
-            {selectedUser.recentPosts.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Recent LinkedIn Posts
-                </h4>
-                <div className="space-y-1.5">
-                  {selectedUser.recentPosts.map((p) => (
-                    <div
-                      key={p.id}
-                      className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
-                    >
-                      <span className="font-semibold text-white truncate max-w-[280px]">{p.topic}</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        p.status === 'posted'
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {p.status.toUpperCase()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Close Button */}
-            <button
-              onClick={() => setSelectedUser(null)}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors"
-            >
-              Close Inspection
-            </button>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-[10px] uppercase font-bold">Payment Gateway</span>
+              <p className="font-bold text-emerald-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Razorpay INR Engine ({systemHealth.razorpay})
+              </p>
+            </div>
           </div>
         </div>
       )}

@@ -166,10 +166,10 @@ export default function SentHistoryPage() {
       {/* Header with Brevo Sync button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Send className="w-7 h-7 text-emerald-400" /> Sent Outreach & Delivery Tracking
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            <Send className="w-7 h-7 text-emerald-600" /> Sent Outreach & Delivery Tracking
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Real-time delivery verification, bounce diagnostics, and recruiter open tracking via Brevo & SMTP.
           </p>
         </div>
@@ -177,17 +177,17 @@ export default function SentHistoryPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchHistory}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-all"
+            className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-2 border border-slate-200 shadow-sm transition-all"
             title="Refresh Table"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             Refresh
           </button>
 
           <button
             onClick={handleSyncBrevo}
             disabled={syncingBrevo}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
           >
             {syncingBrevo ? (
               <>
@@ -207,19 +207,19 @@ export default function SentHistoryPage() {
       {/* Brevo Sync Notification Banner */}
       {brevoSyncMsg && (
         <div
-          className={`p-4 rounded-2xl border flex items-start justify-between gap-3 text-xs ${
+          className={`p-4 rounded-2xl border flex items-start justify-between gap-3 text-xs shadow-sm ${
             brevoSyncMsg.type === 'success'
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : brevoSyncMsg.type === 'warning'
-              ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
-              : 'bg-red-950/40 border-red-500/40 text-red-300'
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : 'bg-red-50 border-red-200 text-red-800'
           }`}
         >
           <div className="flex items-start gap-2">
             {brevoSyncMsg.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
             ) : (
-              <ShieldAlert className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+              <ShieldAlert className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
             )}
             <div>
               <p className="font-semibold">{brevoSyncMsg.text}</p>
@@ -229,13 +229,13 @@ export default function SentHistoryPage() {
                     href={brevoSyncMsg.authUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold text-[11px] hover:bg-amber-400 transition-colors shadow-md"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold text-[11px] hover:bg-amber-400 transition-colors shadow-sm"
                   >
                     Authorize IP ({brevoSyncMsg.detectedIp}) in Brevo <ExternalLink className="w-3 h-3" />
                   </a>
                   <button
                     onClick={handleSyncBrevo}
-                    className="underline text-[11px] text-amber-200 hover:text-white"
+                    className="underline text-[11px] text-amber-800 hover:text-amber-950 font-medium"
                   >
                     I have authorized it, Retry Sync
                   </button>
@@ -243,7 +243,7 @@ export default function SentHistoryPage() {
               )}
             </div>
           </div>
-          <button onClick={() => setBrevoSyncMsg(null)} className="text-slate-400 hover:text-white text-sm">
+          <button onClick={() => setBrevoSyncMsg(null)} className="text-slate-400 hover:text-slate-700 text-sm">
             ✕
           </button>
         </div>
@@ -251,60 +251,60 @@ export default function SentHistoryPage() {
 
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
-          <span className="text-xs text-slate-400">Total Sent</span>
-          <span className="text-xl font-bold text-white mt-1">{totalOutreach}</span>
-          <span className="text-[10px] text-slate-500">Dispatched via Brevo</span>
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <span className="text-xs text-slate-500">Total Sent</span>
+          <span className="text-xl font-bold text-slate-900 mt-1">{totalOutreach}</span>
+          <span className="text-[10px] text-slate-400">Dispatched via Brevo</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/30 flex flex-col justify-between">
-          <span className="text-xs text-emerald-400 flex items-center gap-1">
+        <div className="p-4 rounded-2xl bg-white border border-emerald-200 shadow-sm flex flex-col justify-between">
+          <span className="text-xs text-emerald-700 flex items-center gap-1 font-medium">
             <CheckCircle2 className="w-3.5 h-3.5" /> Delivered
           </span>
-          <span className="text-xl font-bold text-emerald-300 mt-1">{deliveredCount}</span>
-          <span className="text-[10px] text-emerald-500/80">Confirmed Inbox</span>
+          <span className="text-xl font-bold text-emerald-600 mt-1">{deliveredCount}</span>
+          <span className="text-[10px] text-emerald-600">Confirmed Inbox</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-purple-500/30 flex flex-col justify-between">
-          <span className="text-xs text-purple-400 flex items-center gap-1">
+        <div className="p-4 rounded-2xl bg-white border border-purple-200 shadow-sm flex flex-col justify-between">
+          <span className="text-xs text-purple-700 flex items-center gap-1 font-medium">
             <Eye className="w-3.5 h-3.5" /> Opened
           </span>
-          <span className="text-xl font-bold text-purple-300 mt-1">{openedCount}</span>
-          <span className="text-[10px] text-purple-400/80">{openRate}% open rate</span>
+          <span className="text-xl font-bold text-purple-600 mt-1">{openedCount}</span>
+          <span className="text-[10px] text-purple-600">{openRate}% open rate</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-cyan-500/30 flex flex-col justify-between">
-          <span className="text-xs text-cyan-400 flex items-center gap-1">
+        <div className="p-4 rounded-2xl bg-white border border-cyan-200 shadow-sm flex flex-col justify-between">
+          <span className="text-xs text-cyan-700 flex items-center gap-1 font-medium">
             <Mail className="w-3.5 h-3.5" /> Replied
           </span>
-          <span className="text-xl font-bold text-cyan-300 mt-1">{repliedCount}</span>
-          <span className="text-[10px] text-cyan-400/80">{replyRate}% response rate</span>
+          <span className="text-xl font-bold text-cyan-600 mt-1">{repliedCount}</span>
+          <span className="text-[10px] text-cyan-600">{replyRate}% response rate</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-rose-500/30 flex flex-col justify-between">
-          <span className="text-xs text-rose-400 flex items-center gap-1">
+        <div className="p-4 rounded-2xl bg-white border border-rose-200 shadow-sm flex flex-col justify-between">
+          <span className="text-xs text-rose-700 flex items-center gap-1 font-medium">
             <XCircle className="w-3.5 h-3.5" /> Bounced
           </span>
-          <span className="text-xl font-bold text-rose-300 mt-1">{bouncedCount}</span>
-          <span className="text-[10px] text-rose-400/80">Invalid Recipient</span>
+          <span className="text-xl font-bold text-rose-600 mt-1">{bouncedCount}</span>
+          <span className="text-[10px] text-rose-600">Invalid Recipient</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
-          <span className="text-xs text-slate-400 flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Failed
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <span className="text-xs text-slate-500 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-500" /> Failed
           </span>
-          <span className="text-xl font-bold text-slate-300 mt-1">{failedCount}</span>
-          <span className="text-[10px] text-slate-500">SMTP Errors</span>
+          <span className="text-xl font-bold text-red-600 mt-1">{failedCount}</span>
+          <span className="text-[10px] text-slate-400">SMTP Errors</span>
         </div>
       </div>
 
       {/* Audit Log Table */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+          <table className="w-full text-left text-xs text-slate-700">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
               <tr>
-                <th className="p-4 w-12 text-center text-slate-500 font-mono">#</th>
+                <th className="p-4 w-12 text-center text-slate-400 font-mono">#</th>
                 <th className="p-4">Recipient & Company</th>
                 <th className="p-4">Subject Line</th>
                 <th className="p-4">Delivery Status</th>
@@ -313,72 +313,72 @@ export default function SentHistoryPage() {
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin text-emerald-400 mx-auto mb-2" />
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600 mx-auto mb-2" />
                     Loading delivery audit history...
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 italic">
+                  <td colSpan={7} className="p-8 text-center text-slate-400 italic">
                     No emails dispatched yet. Approved emails will appear here with live delivery status.
                   </td>
                 </tr>
               ) : (
                 records.map((r, index) => (
-                  <tr key={r.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-4 text-center font-mono text-slate-500 text-xs font-semibold">
+                  <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-4 text-center font-mono text-slate-400 text-xs font-semibold">
                       #{index + 1}
                     </td>
                     <td className="p-4">
-                      <p className="font-bold text-white text-sm">{r.leads?.company || 'Company'}</p>
-                      <p className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
+                      <p className="font-bold text-slate-900 text-sm">{r.leads?.company || 'Company'}</p>
+                      <p className="text-[11px] text-emerald-600 font-mono flex items-center gap-1">
                         <Mail className="w-3 h-3" /> {r.leads?.email || 'N/A'}
                       </p>
                     </td>
 
                     <td className="p-4 max-w-xs">
-                      <p className="truncate text-slate-200 font-medium" title={r.subject}>
+                      <p className="truncate text-slate-800 font-medium" title={r.subject}>
                         {r.subject}
                       </p>
-                      <span className="text-[10px] text-slate-500 uppercase font-mono">{r.ai_provider}</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-mono">{r.ai_provider}</span>
                     </td>
 
                     <td className="p-4">
                       {r.status === 'replied' ? (
-                        <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold flex items-center gap-1.5 w-max">
-                          <Mail className="w-3.5 h-3.5 text-cyan-400" /> Replied by Recruiter
+                        <span className="px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-700 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <Mail className="w-3.5 h-3.5 text-cyan-600" /> Replied by Recruiter
                         </span>
                       ) : r.status === 'opened' ? (
-                        <span className="px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/40 text-purple-300 text-[10px] font-bold flex items-center gap-1.5 w-max">
-                          <Eye className="w-3.5 h-3.5 text-purple-400 animate-pulse" /> Opened / Viewed
+                        <span className="px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <Eye className="w-3.5 h-3.5 text-purple-600 animate-pulse" /> Opened / Viewed
                         </span>
                       ) : r.status === 'delivered' ? (
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold flex items-center gap-1.5 w-max">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Delivered (Brevo)
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Delivered (Brevo)
                         </span>
                       ) : r.status === 'bounced' ? (
                         <span
-                          className="px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/40 text-rose-300 text-[10px] font-bold flex items-center gap-1.5 w-max cursor-help"
+                          className="px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold flex items-center gap-1.5 w-max cursor-help"
                           title={r.error_message || 'Recipient email bounced'}
                         >
-                          <XCircle className="w-3.5 h-3.5 text-rose-400" /> Bounced
+                          <XCircle className="w-3.5 h-3.5 text-rose-600" /> Bounced
                         </span>
                       ) : r.status === 'sent' ? (
-                        <span className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] font-bold flex items-center gap-1.5 w-max">
-                          <Send className="w-3.5 h-3.5 text-blue-400" /> Sent (In Transit)
+                        <span className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <Send className="w-3.5 h-3.5 text-blue-600" /> Sent (In Transit)
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold flex items-center gap-1.5 w-max">
-                          <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Failed
+                        <span className="px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold flex items-center gap-1.5 w-max">
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" /> Failed
                         </span>
                       )}
                     </td>
 
-                    <td className="p-4 text-slate-400 font-mono text-[11px]">
+                    <td className="p-4 text-slate-500 font-mono text-[11px]">
                       {r.sent_at ? (
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" /> {new Date(r.sent_at).toLocaleDateString()}
@@ -390,19 +390,19 @@ export default function SentHistoryPage() {
 
                     <td className="p-4 text-center">
                       {r.status === 'bounced' && r.error_message ? (
-                        <span className="text-[10px] text-rose-400 font-mono truncate max-w-[150px] inline-block" title={r.error_message}>
+                        <span className="text-[10px] text-rose-600 font-mono truncate max-w-[150px] inline-block" title={r.error_message}>
                           {r.error_message}
                         </span>
                       ) : r.status === 'opened' ? (
-                        <span className="text-[10px] text-purple-300 font-mono">
+                        <span className="text-[10px] text-purple-700 font-mono">
                           Read by HR
                         </span>
                       ) : r.status === 'delivered' ? (
-                        <span className="text-[10px] text-emerald-400 font-mono">
+                        <span className="text-[10px] text-emerald-700 font-mono">
                           Server 250 OK
                         </span>
                       ) : (
-                        <span className="text-[10px] text-slate-500 font-mono">-</span>
+                        <span className="text-[10px] text-slate-400 font-mono">-</span>
                       )}
                     </td>
 
@@ -410,7 +410,7 @@ export default function SentHistoryPage() {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => setActiveModalRecord(r)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm"
                           title="View Sent Payload"
                         >
                           <Eye className="w-4 h-4" />
@@ -420,7 +420,7 @@ export default function SentHistoryPage() {
                           <button
                             onClick={() => handleRetrySend(r)}
                             disabled={retryingId === r.id}
-                            className="p-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 text-red-300 transition-colors disabled:opacity-50"
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-colors disabled:opacity-50"
                             title="Retry Manual Dispatch"
                           >
                             <RefreshCw className={`w-4 h-4 ${retryingId === r.id ? 'animate-spin' : ''}`} />
@@ -438,26 +438,26 @@ export default function SentHistoryPage() {
 
       {/* Brevo IP Authorization Modal */}
       {ipModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-amber-400 border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-amber-600 border-b border-slate-100 pb-3">
               <ShieldAlert className="w-6 h-6" />
-              <h3 className="text-base font-bold text-white">Brevo IP Authorization Required</h3>
+              <h3 className="text-base font-bold text-slate-900">Brevo IP Authorization Required</h3>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               Brevo has an IP security safeguard enabled on your account. Because your connection is originating from IP{' '}
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-mono font-bold">
                 {brevoSyncMsg?.detectedIp || '103.217.132.247'}
               </span>
               , Brevo requires you to whitelist this IP address before allowing API access.
             </p>
 
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 space-y-2">
-              <p className="font-semibold text-white">How to fix in 30 seconds:</p>
-              <ol className="list-decimal list-inside space-y-1 text-slate-300">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
+              <p className="font-semibold text-slate-900">How to fix in 30 seconds:</p>
+              <ol className="list-decimal list-inside space-y-1 text-slate-700">
                 <li>Click the button below to open Brevo Authorized IPs page.</li>
-                <li>Add IP <code className="text-emerald-400">{brevoSyncMsg?.detectedIp || '103.217.132.247'}</code> or click &ldquo;Authorize current IP&rdquo;.</li>
+                <li>Add IP <code className="text-emerald-700 font-bold">{brevoSyncMsg?.detectedIp || '103.217.132.247'}</code> or click &ldquo;Authorize current IP&rdquo;.</li>
                 <li>Click &ldquo;Confirm &amp; Retry Sync&rdquo; below!</li>
               </ol>
             </div>
@@ -465,7 +465,7 @@ export default function SentHistoryPage() {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setIpModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
               >
                 Close
               </button>
@@ -473,7 +473,7 @@ export default function SentHistoryPage() {
                 href={brevoSyncMsg?.authUrl || 'https://app.brevo.com/security/authorised_ips'}
                 target="_blank"
                 rel="noreferrer"
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-lg"
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-sm"
               >
                 Open Brevo Security Page <ExternalLink className="w-3.5 h-3.5" />
               </a>
@@ -482,7 +482,7 @@ export default function SentHistoryPage() {
                   setIpModalOpen(false);
                   handleSyncBrevo();
                 }}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
               >
                 Retry Sync Now
               </button>
@@ -493,51 +493,51 @@ export default function SentHistoryPage() {
 
       {/* Modal View Sent Payload & Telemetry */}
       {activeModalRecord && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-xl w-full space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Building className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">{activeModalRecord.leads?.company}</h3>
+                <Building className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900">{activeModalRecord.leads?.company}</h3>
               </div>
-              <button onClick={() => setActiveModalRecord(null)} className="text-slate-400 hover:text-white text-sm">
+              <button onClick={() => setActiveModalRecord(null)} className="text-slate-400 hover:text-slate-700 text-sm">
                 ✕
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-slate-400">Recipient Email: </span>
-                <span className="text-emerald-400 font-mono font-semibold">{activeModalRecord.leads?.email}</span>
+                <span className="text-slate-500">Recipient Email: </span>
+                <span className="text-emerald-600 font-mono font-semibold">{activeModalRecord.leads?.email}</span>
               </div>
 
               <div>
-                <span className="text-slate-400">Delivery Status: </span>
-                <span className="font-bold uppercase font-mono text-indigo-300">{activeModalRecord.status}</span>
+                <span className="text-slate-500">Delivery Status: </span>
+                <span className="font-bold uppercase font-mono text-indigo-700">{activeModalRecord.status}</span>
               </div>
 
               {activeModalRecord.error_message && (
-                <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300">
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800">
                   <span className="font-bold">Error / Bounce Diagnostic: </span>
                   <p className="mt-1 font-mono text-[11px]">{activeModalRecord.error_message}</p>
                 </div>
               )}
 
               {activeModalRecord.leads?.raw_data?.reply && (
-                <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300">
+                <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200 text-cyan-800">
                   <span className="font-bold">Recruiter Reply: </span>
                   <p className="mt-1 italic">&ldquo;{activeModalRecord.leads.raw_data.reply.snippet}&rdquo;</p>
                 </div>
               )}
 
               <div>
-                <span className="text-slate-400">Subject: </span>
-                <p className="text-white font-medium mt-0.5">{activeModalRecord.subject}</p>
+                <span className="text-slate-500">Subject: </span>
+                <p className="text-slate-900 font-medium mt-0.5">{activeModalRecord.subject}</p>
               </div>
 
               <div>
-                <span className="text-slate-400">Email Body: </span>
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 whitespace-pre-wrap font-mono text-[11px] max-h-60 overflow-y-auto mt-1">
+                <span className="text-slate-500">Email Body: </span>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 whitespace-pre-wrap font-mono text-[11px] max-h-60 overflow-y-auto mt-1">
                   {activeModalRecord.body}
                 </div>
               </div>
@@ -546,7 +546,7 @@ export default function SentHistoryPage() {
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setActiveModalRecord(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
               >
                 Done
               </button>

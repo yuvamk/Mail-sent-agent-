@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
 import { getUserCredentials } from '@/lib/user-credentials';
 import { generateLinkedInPost } from '@/lib/linkedin-ai';
+import { assertActiveSubscription } from '@/lib/subscription';
 import {
   extractArticleImage,
   generateGeminiImage,
@@ -18,6 +19,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized. Please sign in to generate posts.' },
         { status: 401 }
+      );
+    }
+
+    const subCheck = await assertActiveSubscription(userId);
+    if (!subCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: subCheck.error, code: 'SUBSCRIPTION_EXPIRED' },
+        { status: 402 }
       );
     }
 

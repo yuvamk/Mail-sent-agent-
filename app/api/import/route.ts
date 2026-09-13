@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { previewExcelFile, processExcelFileWithMapping, ColumnMapping } from '@/lib/excel';
 import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
+import { assertActiveSubscription } from '@/lib/subscription';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,28 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: 'No Excel file provided' }, { status: 400 });
+    }
+
+    let userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      const formUserId = formData.get('userId') as string | null;
+      if (formUserId) {
+        userId = formUserId;
+      }
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 });
+    }
+
+    if (action !== 'preview') {
+      const subCheck = await assertActiveSubscription(userId);
+      if (!subCheck.allowed) {
+        return NextResponse.json(
+          { error: subCheck.error, code: 'SUBSCRIPTION_EXPIRED' },
+          { status: 402 }
+        );
+      }
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -44,17 +67,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let userId = await getUserIdFromRequest(req);
-    if (!userId) {
-      const formUserId = formData.get('userId') as string | null;
-      if (formUserId) {
-        userId = formUserId;
-      }
-    }
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 });
-    }
 
     const supabase = createAdminClient();
 

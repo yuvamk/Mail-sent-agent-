@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { sendOutreachEmail } from '@/lib/smtp';
+import { assertActiveSubscription } from '@/lib/subscription';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +23,16 @@ export async function POST(req: NextRequest) {
 
     if (draftError || !draft) {
       return NextResponse.json({ error: 'Draft record not found' }, { status: 404 });
+    }
+
+    if (draft.user_id) {
+      const subCheck = await assertActiveSubscription(draft.user_id);
+      if (!subCheck.allowed) {
+        return NextResponse.json(
+          { error: subCheck.error, code: 'SUBSCRIPTION_EXPIRED' },
+          { status: 402 }
+        );
+      }
     }
 
     const lead = draft.leads;

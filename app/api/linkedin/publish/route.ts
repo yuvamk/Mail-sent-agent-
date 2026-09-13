@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getUserIdFromRequest } from '@/lib/supabase-server';
 import { publishToLinkedIn, getLinkedInProfile } from '@/lib/linkedin-publisher';
+import { assertActiveSubscription } from '@/lib/subscription';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Please sign in to publish to LinkedIn.' },
         { status: 401 }
+      );
+    }
+
+    const subCheck = await assertActiveSubscription(userId);
+    if (!subCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: subCheck.error, code: 'SUBSCRIPTION_EXPIRED' },
+        { status: 402 }
       );
     }
 

@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { generateEmailDraft } from '@/lib/ai';
+import { assertActiveSubscription } from '@/lib/subscription';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { leadIds, provider = 'groq', groqModel = 'groq/compound', userId } = body;
+
+    if (userId) {
+      const subCheck = await assertActiveSubscription(userId);
+      if (!subCheck.allowed) {
+        return NextResponse.json(
+          { error: subCheck.error, code: 'SUBSCRIPTION_EXPIRED' },
+          { status: 402 }
+        );
+      }
+    }
 
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
       return NextResponse.json({ error: 'leadIds array is required and cannot be empty' }, { status: 400 });

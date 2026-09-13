@@ -206,6 +206,32 @@ LINKEDIN_PERSON_URN=urn:li:person:your-urn
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
+### 💳 Pillar 3: Razorpay Subscription & Billing Engine
+- 💰 **Tiered INR Pricing Architecture**:
+  - **Pro Career Monthly**: ₹499/month — Unlimited CSV/Excel uploads, Gemini 3-key pool, Groq failover, LinkedIn Studio, Brevo SMTP.
+  - **Pro Career Annual**: ₹4,999/year (Save 17%) — All Pro features + priority rate-limit queue + VIP support.
+  - **Enterprise Agency**: ₹1,499/month — Multi-account recruiter pooling, white-label domain, full admin governance.
+- ⚡ **Automated Pipeline Lockouts**:
+  - Automatically asserts active subscription status before generating drafts, dispatching emails, generating LinkedIn posts, or publishing.
+  - Expired accounts receive HTTP 402 with seamless in-app upgrade modals.
+  - Pre-expiry warning banners activate when $\le 3$ days remain on the subscription.
+- 🧾 **Transactional Tax Invoices & Admin Real-Time Alerts**:
+  - Automatically dispatches itemized, branded HTML Tax Invoices & Receipts via Brevo SMTP immediately upon successful Razorpay payment verification.
+  - Instant admin payment alert notification sent directly to `yuvamk6@gmail.com` with user ID, plan name, order ID, and transaction amount.
+- 🛡️ **Admin Governance Hub**:
+  - Superadmin (`yuvamk6@gmail.com`) dashboard with one-click actions (+30 Days, Activate, Expire, Grant VIP Lifetime).
+  - Immunity for superadmin from service lockouts and subscription expiration.
+
+### 🔐 Pillar 4: Dual Authentication Flow (Email OTP + Password)
+- 📬 **Passwordless 6-Digit Email OTP**:
+  - Secure verification codes generated server-side and dispatched instantly via Brevo SMTP relay.
+  - Verified against Supabase Auth with zero password friction.
+- 🔑 **Standard Password Login & Onboarding**:
+  - Traditional email + password authentication for returning power users.
+  - Interactive candidate profile onboarding collecting signature name, phone, GitHub, and LinkedIn profile URLs.
+
+---
+
 ### 4. Supabase MCP & Database Migration
 Set up Supabase MCP and execute the database migration:
 
@@ -214,7 +240,7 @@ Set up Supabase MCP and execute the database migration:
 npx skills add supabase/agent-skills
 ```
 
-Apply the SQL schema in `supabase/schema.sql` and `supabase/migrations/20260913_linkedin_posts.sql` via the Supabase SQL Editor.
+Apply the SQL schema in `supabase/schema.sql`, `supabase/migrations/20260913_linkedin_posts.sql`, and `supabase/migrations/20260913_subscriptions_razorpay.sql` via the Supabase SQL Editor.
 
 ### 5. Run Locally
 ```bash

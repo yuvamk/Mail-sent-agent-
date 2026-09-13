@@ -391,10 +391,10 @@ export default function LeadsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Users className="w-7 h-7 text-blue-400" /> Outreach Dashboard & Lead Manager
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            <Users className="w-7 h-7 text-blue-600" /> Outreach Dashboard & Lead Manager
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Browse extracted leads, track sent emails and recruiter replies, and queue AI drafts with live progress.
           </p>
         </div>
@@ -404,10 +404,10 @@ export default function LeadsPage() {
           <button
             onClick={handleSyncReplies}
             disabled={syncingReplies}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all shadow-md hover:border-cyan-500/50"
+            className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-all shadow-sm hover:border-cyan-500/50"
             title="Scan your Gmail inbox for replies from recruiters"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${syncingReplies ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-600 ${syncingReplies ? 'animate-spin' : ''}`} />
             {syncingReplies ? 'Checking Inbox...' : 'Check / Sync Replies'}
           </button>
 
@@ -419,9 +419,9 @@ export default function LeadsPage() {
                 setModalOpen(true);
               }}
               id="btn-open-generate-modal"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all animate-scale-in"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 flex items-center gap-2 transition-all animate-scale-in"
             >
-              <Sparkles className="w-4 h-4 text-cyan-300" /> Queue AI Drafts ({selectedCount} Selected)
+              <Sparkles className="w-4 h-4 text-cyan-200" /> Queue AI Drafts ({selectedCount} Selected)
             </button>
           )}
         </div>
@@ -430,21 +430,21 @@ export default function LeadsPage() {
       {/* Sync Feedback Toast */}
       {syncFeedback && (
         <div
-          className={`p-4 rounded-xl text-xs flex items-center justify-between border shadow-lg ${
+          className={`p-4 rounded-xl text-xs flex items-center justify-between border shadow-sm ${
             syncFeedback.type === 'success'
-              ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
-              : 'bg-red-950/60 border-red-800 text-red-300'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-red-50 border-red-200 text-red-800'
           }`}
         >
           <div className="flex items-center gap-2.5">
             {syncFeedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
             )}
             <span>{syncFeedback.message}</span>
           </div>
-          <button onClick={() => setSyncFeedback(null)} className="text-slate-400 hover:text-white text-xs ml-4">
+          <button onClick={() => setSyncFeedback(null)} className="text-slate-400 hover:text-slate-700 text-xs ml-4">
             ✕
           </button>
         </div>
@@ -452,9 +452,9 @@ export default function LeadsPage() {
 
       {/* Error Alert */}
       {fetchError && (
-        <div className="p-4 rounded-xl bg-red-950/50 border border-red-800 text-red-300 text-sm flex items-center justify-between shadow-lg">
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
             <span>{fetchError}</span>
           </div>
           <button
@@ -462,7 +462,7 @@ export default function LeadsPage() {
               setLoading(true);
               fetchLeads();
             }}
-            className="px-3 py-1 rounded-lg bg-red-900 hover:bg-red-800 text-white text-xs font-semibold transition-colors"
+            className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
           >
             Retry
           </button>
@@ -472,64 +472,64 @@ export default function LeadsPage() {
       {/* Dashboard Top Stats Bar: Total Leads, Sent, Replies, Drafts, and Cost in Rupees */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* Total Leads */}
-        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-400 font-medium">Total Leads</p>
-            <p className="text-xl font-bold text-white">{stats.totalLeads}</p>
+            <p className="text-[11px] text-slate-500 font-medium">Total Leads</p>
+            <p className="text-xl font-bold text-slate-900">{stats.totalLeads}</p>
           </div>
         </div>
 
         {/* Total Mails Sent */}
-        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
             <Send className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-400 font-medium">Mails Sent</p>
-            <p className="text-xl font-bold text-emerald-400">{stats.sentCount}</p>
+            <p className="text-[11px] text-slate-500 font-medium">Mails Sent</p>
+            <p className="text-xl font-bold text-emerald-600">{stats.sentCount}</p>
           </div>
         </div>
 
         {/* Replies Received */}
-        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600">
             <MessageSquare className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-400 font-medium">Replies Got</p>
-            <p className="text-xl font-bold text-cyan-300">{stats.repliedCount}</p>
+            <p className="text-[11px] text-slate-500 font-medium">Replies Got</p>
+            <p className="text-xl font-bold text-cyan-700">{stats.repliedCount}</p>
           </div>
         </div>
 
         {/* AI Drafts Ready */}
-        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
             <Bot className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-400 font-medium">Drafts Ready</p>
-            <p className="text-xl font-bold text-indigo-300">{stats.draftedCount}</p>
+            <p className="text-[11px] text-slate-500 font-medium">Drafts Ready</p>
+            <p className="text-xl font-bold text-indigo-700">{stats.draftedCount}</p>
           </div>
         </div>
 
         {/* Total AI Token Cost in Rupees */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 border border-indigo-500/30 shadow-md flex items-center gap-3 col-span-2 sm:col-span-1">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/50 via-white to-indigo-50/40 border border-amber-200/80 shadow-sm flex items-center gap-3 col-span-2 sm:col-span-1">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-600">
             <Coins className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-400 font-medium">AI Token Cost (₹)</p>
-            <p className="text-xl font-bold text-amber-300">₹{stats.totalCostINR.toFixed(2)}</p>
-            <p className="text-[10px] text-slate-500">{stats.totalTokens.toLocaleString()} tokens</p>
+            <p className="text-[11px] text-slate-500 font-medium">AI Token Cost (₹)</p>
+            <p className="text-xl font-bold text-amber-700">₹{stats.totalCostINR.toFixed(2)}</p>
+            <p className="text-[10px] text-slate-400">{stats.totalTokens.toLocaleString()} tokens</p>
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-xl">
+      <div className="p-4 rounded-2xl bg-white border border-slate-200 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-sm">
         <div className="relative w-full lg:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -537,34 +537,34 @@ export default function LeadsPage() {
             placeholder="Search company, skills, exp, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-blue-500 transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-400 transition-colors"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           {/* Experience Filter */}
-          <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs text-slate-300">
-            <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="font-semibold text-slate-400">Exp:</span>
+          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-700">
+            <Briefcase className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="font-semibold text-slate-500">Exp:</span>
             <select
               value={expFilter}
               onChange={(e) => setExpFilter(e.target.value)}
-              className="bg-transparent text-white focus:outline-none cursor-pointer text-xs"
+              className="bg-transparent text-slate-900 focus:outline-none cursor-pointer text-xs"
             >
-              <option value="all" className="bg-slate-900">All Experience</option>
-              <option value="0-1" className="bg-slate-900">0 - 1 Years</option>
-              <option value="1-3" className="bg-slate-900">1 - 3 Years</option>
-              <option value="3-5" className="bg-slate-900">3 - 5 Years</option>
-              <option value="5+" className="bg-slate-900">5+ Years</option>
+              <option value="all" className="bg-white text-slate-800">All Experience</option>
+              <option value="0-1" className="bg-white text-slate-800">0 - 1 Years</option>
+              <option value="1-3" className="bg-white text-slate-800">1 - 3 Years</option>
+              <option value="3-5" className="bg-white text-slate-800">3 - 5 Years</option>
+              <option value="5+" className="bg-white text-slate-800">5+ Years</option>
             </select>
           </div>
 
           {/* Status Tabs */}
-          <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex flex-wrap text-xs font-medium gap-1">
+          <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex flex-wrap text-xs font-medium gap-1">
             <button
               onClick={() => setFilterType('all')}
               className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'all' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+                filterType === 'all' ? 'bg-white text-blue-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               All ({leads.length})
@@ -572,7 +572,7 @@ export default function LeadsPage() {
             <button
               onClick={() => setFilterType('unsent')}
               className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'unsent' ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+                filterType === 'unsent' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Unsent ({unsentEligibleCount})
@@ -580,7 +580,7 @@ export default function LeadsPage() {
             <button
               onClick={() => setFilterType('sent')}
               className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'sent' ? 'bg-emerald-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+                filterType === 'sent' ? 'bg-white text-emerald-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Sent ({stats.sentCount})
@@ -588,7 +588,7 @@ export default function LeadsPage() {
             <button
               onClick={() => setFilterType('replied')}
               className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'replied' ? 'bg-cyan-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+                filterType === 'replied' ? 'bg-white text-cyan-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Replies ({stats.repliedCount})
@@ -598,25 +598,25 @@ export default function LeadsPage() {
       </div>
 
       {/* Leads Table with Serial Numbers (#) */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+          <table className="w-full text-left text-xs text-slate-700">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
               <tr>
                 <th className="p-4 w-10 text-center">
                   <button
                     onClick={toggleSelectAll}
                     title="Select all un-sent leads (protected sent leads are excluded)"
-                    className="text-slate-400 hover:text-white transition-colors"
+                    className="text-slate-400 hover:text-slate-700 transition-colors"
                   >
                     {selectedIds.length > 0 && selectedIds.length === eligibleUnsentLeadIds.length ? (
-                      <CheckSquare className="w-4 h-4 text-blue-400" />
+                      <CheckSquare className="w-4 h-4 text-blue-600" />
                     ) : (
                       <Square className="w-4 h-4" />
                     )}
                   </button>
                 </th>
-                <th className="p-4 w-12 text-center text-slate-500 font-mono">#</th>
+                <th className="p-4 w-12 text-center text-slate-400 font-mono">#</th>
                 <th className="p-4">Company</th>
                 <th className="p-4">Required Skills</th>
                 <th className="p-4">Exp & Salary</th>
@@ -624,17 +624,17 @@ export default function LeadsPage() {
                 <th className="p-4 text-center">Outreach Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-400 mx-auto mb-2" />
+                  <td colSpan={7} className="p-8 text-center text-slate-500">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
                     Loading leads database...
                   </td>
                 </tr>
               ) : filteredLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 italic">
+                  <td colSpan={7} className="p-8 text-center text-slate-400 italic">
                     No leads found matching current filters.
                   </td>
                 </tr>
@@ -647,8 +647,8 @@ export default function LeadsPage() {
                   return (
                     <tr
                       key={lead.id}
-                      className={`hover:bg-slate-800/40 transition-colors ${
-                        isSelected ? 'bg-blue-950/20' : ''
+                      className={`hover:bg-slate-50/80 transition-colors ${
+                        isSelected ? 'bg-blue-50/60' : ''
                       }`}
                     >
                       {/* Checkbox */}
@@ -656,50 +656,50 @@ export default function LeadsPage() {
                         {lead.has_valid_email ? (
                           <button
                             onClick={() => toggleSelectOne(lead.id)}
-                            className="text-slate-400 hover:text-white"
+                            className="text-slate-400 hover:text-slate-700"
                             title={isSent ? 'Outreach email already sent (Protected)' : 'Select for AI generation'}
                           >
                             {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-blue-400" />
+                              <CheckSquare className="w-4 h-4 text-blue-600" />
                             ) : (
                               <Square className="w-4 h-4" />
                             )}
                           </button>
                         ) : (
-                          <span className="text-slate-600 cursor-not-allowed">–</span>
+                          <span className="text-slate-300 cursor-not-allowed">–</span>
                         )}
                       </td>
 
                       {/* Serial Number (#) */}
-                      <td className="p-4 text-center font-mono text-slate-500 text-xs font-semibold">
+                      <td className="p-4 text-center font-mono text-slate-400 text-xs font-semibold">
                         #{index + 1}
                       </td>
 
                       {/* Company & Location */}
                       <td className="p-4">
-                        <p className="font-bold text-slate-100 text-sm">{lead.company}</p>
-                        <p className="text-[11px] text-slate-400">{lead.location || 'Location unspecified'}</p>
+                        <p className="font-bold text-slate-900 text-sm">{lead.company}</p>
+                        <p className="text-[11px] text-slate-500">{lead.location || 'Location unspecified'}</p>
                       </td>
 
                       {/* Key Skills */}
                       <td className="p-4 max-w-xs">
-                        <p className="truncate text-slate-300" title={lead.key_skills || ''}>
+                        <p className="truncate text-slate-700 font-medium" title={lead.key_skills || ''}>
                           {lead.key_skills || 'N/A'}
                         </p>
                       </td>
 
                       {/* Experience & Salary */}
                       <td className="p-4">
-                        <p className="text-slate-300 font-semibold text-emerald-400">
+                        <p className="text-emerald-600 font-semibold">
                           {lead.experience ? `${lead.experience}` : 'Exp N/A'}
                         </p>
-                        <p className="text-[11px] text-slate-400">{lead.salary || 'Salary N/A'}</p>
+                        <p className="text-[11px] text-slate-500">{lead.salary || 'Salary N/A'}</p>
                       </td>
 
                       {/* Contact / Email / Link */}
                       <td className="p-4">
                         {lead.has_valid_email && lead.email ? (
-                          <div className="flex items-center gap-1.5 text-emerald-400 font-mono">
+                          <div className="flex items-center gap-1.5 text-emerald-600 font-mono">
                             <Mail className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate max-w-[200px]" title={lead.email}>
                               {lead.email}
@@ -710,51 +710,51 @@ export default function LeadsPage() {
                             href={lead.apply_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-cyan-400 hover:underline font-medium"
+                            className="inline-flex items-center gap-1 text-cyan-600 hover:underline font-medium"
                           >
                             Apply Link <ExternalLink className="w-3 h-3" />
                           </a>
                         ) : (
-                          <span className="text-slate-500 italic">No Direct Contact</span>
+                          <span className="text-slate-400 italic">No Direct Contact</span>
                         )}
                       </td>
 
                       {/* Outreach Status */}
                       <td className="p-4 text-center">
                         {isReplied ? (
-                          <span className="px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold inline-flex items-center gap-1">
-                            <MessageSquare className="w-3 h-3 text-cyan-400" /> Replied
+                          <span className="px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-700 text-[10px] font-bold inline-flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3 text-cyan-600" /> Replied
                           </span>
                         ) : lead.draftStatus === 'opened' ? (
-                          <span className="px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-[10px] font-bold inline-flex items-center gap-1">
-                            <Eye className="w-3 h-3 text-purple-400" /> Opened
+                          <span className="px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3 text-purple-600" /> Opened
                           </span>
                         ) : lead.draftStatus === 'delivered' ? (
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Delivered
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Delivered
                           </span>
                         ) : lead.draftStatus === 'bounced' ? (
-                          <span className="px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[10px] font-bold inline-flex items-center gap-1">
-                            <XCircle className="w-3 h-3 text-rose-400" /> Bounced
+                          <span className="px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold inline-flex items-center gap-1">
+                            <XCircle className="w-3 h-3 text-rose-600" /> Bounced
                           </span>
                         ) : isSent ? (
-                          <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-bold inline-flex items-center gap-1">
-                            <Send className="w-3 h-3 text-blue-400" /> Sent
+                          <span className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold inline-flex items-center gap-1">
+                            <Send className="w-3 h-3 text-blue-600" /> Sent
                           </span>
                         ) : lead.draftStatus === 'failed' ? (
-                          <span className="px-2.5 py-1 rounded-full bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-bold inline-flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3 text-red-400" /> Failed
+                          <span className="px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold inline-flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-red-600" /> Failed
                           </span>
                         ) : lead.draftStatus ? (
-                          <span className="px-2.5 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold">
+                          <span className="px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-semibold">
                             {lead.draftStatus}
                           </span>
                         ) : lead.has_valid_email ? (
-                          <span className="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-[10px]">
+                          <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[10px]">
                             Not Drafted
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-slate-500 text-[10px]">Portal Link</span>
+                          <span className="px-2 py-0.5 rounded text-slate-400 text-[10px]">Portal Link</span>
                         )}
                       </td>
                     </tr>
@@ -768,15 +768,15 @@ export default function LeadsPage() {
 
       {/* Real-time AI Generation Modal with Live Progress Bar */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full space-y-5 shadow-2xl animate-scale-in">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-xl w-full space-y-5 shadow-2xl animate-scale-in">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
-                <Bot className="w-6 h-6 text-indigo-400" />
+                <Bot className="w-6 h-6 text-indigo-600" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Queue Sequential AI Drafts</h3>
-                  <p className="text-[11px] text-slate-400">
+                  <h3 className="text-base font-bold text-slate-900">Queue Sequential AI Drafts</h3>
+                  <p className="text-[11px] text-slate-500">
                     {progressState.inProgress
                       ? 'Generating personalized cold outreach drafts...'
                       : progressState.isFinished
@@ -788,7 +788,7 @@ export default function LeadsPage() {
               {!progressState.inProgress && (
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="text-slate-400 hover:text-white text-sm"
+                  className="text-slate-400 hover:text-slate-700 text-sm"
                 >
                   ✕
                 </button>
@@ -800,56 +800,56 @@ export default function LeadsPage() {
               <div className="space-y-4">
                 {/* Progress Bar Header */}
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-semibold flex items-center gap-1.5">
-                    {progressState.inProgress && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />}
+                  <span className="text-slate-700 font-semibold flex items-center gap-1.5">
+                    {progressState.inProgress && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-600" />}
                     {progressState.isFinished ? '✓ Batch Generation Finished' : 'Processing Outreach Queue'}
                   </span>
-                  <span className="font-mono text-cyan-400 font-extrabold text-sm">
+                  <span className="font-mono text-cyan-600 font-extrabold text-sm">
                     {progressState.percent}%
                   </span>
                 </div>
 
                 {/* Animated Progress Bar */}
-                <div className="w-full bg-slate-950 rounded-full h-3 p-0.5 border border-slate-800 overflow-hidden">
+                <div className="w-full bg-slate-100 rounded-full h-3 p-0.5 border border-slate-200 overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-300 shadow-sm shadow-cyan-500/50"
+                    className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 h-full rounded-full transition-all duration-300 shadow-sm"
                     style={{ width: `${progressState.percent}%` }}
                   />
                 </div>
 
                 {/* Real-time Counters Grid */}
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                  <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
-                    <p className="text-[10px] text-slate-400 font-medium">Generated</p>
-                    <p className="text-emerald-400 font-bold text-sm">
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-[10px] text-slate-500 font-medium">Generated</p>
+                    <p className="text-emerald-600 font-bold text-sm">
                       {progressState.completedCount} / {progressState.totalToProcess}
                     </p>
                   </div>
-                  <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
-                    <p className="text-[10px] text-slate-400 font-medium">Remaining</p>
-                    <p className="text-cyan-300 font-bold text-sm">
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-[10px] text-slate-500 font-medium">Remaining</p>
+                    <p className="text-cyan-700 font-bold text-sm">
                       {Math.max(0, progressState.totalToProcess - progressState.completedCount - progressState.errorCount)}
                     </p>
                   </div>
-                  <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
-                    <p className="text-[10px] text-slate-400 font-medium">Sent (Skipped)</p>
-                    <p className="text-amber-400 font-bold text-sm">{progressState.skippedCount}</p>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-[10px] text-slate-500 font-medium">Sent (Skipped)</p>
+                    <p className="text-amber-600 font-bold text-sm">{progressState.skippedCount}</p>
                   </div>
-                  <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
-                    <p className="text-[10px] text-slate-400 font-medium">Errors</p>
-                    <p className="text-red-400 font-bold text-sm">{progressState.errorCount}</p>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-[10px] text-slate-500 font-medium">Errors</p>
+                    <p className="text-red-600 font-bold text-sm">{progressState.errorCount}</p>
                   </div>
                 </div>
 
                 {/* Active Lead Pill */}
                 {progressState.inProgress && (
-                  <div className="p-3 bg-blue-950/40 border border-blue-800/50 rounded-xl flex items-center gap-2.5 text-xs">
-                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 animate-spin" />
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2.5 text-xs">
+                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0 animate-spin" />
                     <div className="truncate">
-                      <p className="font-semibold text-white truncate">
+                      <p className="font-semibold text-slate-900 truncate">
                         Processing: {progressState.currentLeadName}
                       </p>
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="text-[11px] text-slate-500 truncate">
                         {progressState.currentLeadEmail} • Model: {aiProvider.toUpperCase()}
                       </p>
                     </div>
@@ -858,21 +858,21 @@ export default function LeadsPage() {
 
                 {/* Live Activity Log Feed */}
                 <div className="space-y-1">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Activity Feed:</p>
-                  <div className="max-h-40 overflow-y-auto space-y-1.5 p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px]">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Activity Feed:</p>
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200 font-mono text-[11px]">
                     {progressState.activityLogs.length === 0 ? (
-                      <p className="text-slate-500 italic">Starting generation queue...</p>
+                      <p className="text-slate-400 italic">Starting generation queue...</p>
                     ) : (
                       progressState.activityLogs.map((log, i) => (
                         <div key={i} className="flex items-start gap-2">
-                          <span className="text-slate-500 shrink-0">[{log.timestamp}]</span>
+                          <span className="text-slate-400 shrink-0">[{log.timestamp}]</span>
                           <span
                             className={
                               log.type === 'success'
-                                ? 'text-emerald-400'
+                                ? 'text-emerald-600'
                                 : log.type === 'skip'
-                                ? 'text-amber-400'
-                                : 'text-red-400'
+                                ? 'text-amber-600'
+                                : 'text-red-600'
                             }
                           >
                             {log.type === 'success' ? '✓ ' : log.type === 'skip' ? '⏩ ' : '✕ '}
@@ -889,13 +889,13 @@ export default function LeadsPage() {
                   <div className="pt-2 flex items-center justify-between gap-3">
                     <button
                       onClick={() => setModalOpen(false)}
-                      className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+                      className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
                     >
                       Close Modal
                     </button>
                     <Link
                       href="/review"
-                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/20"
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-cyan-600/20"
                     >
                       View Review Queue <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
@@ -905,28 +905,28 @@ export default function LeadsPage() {
             ) : (
               /* CONFIGURATION VIEW (before generation starts) */
               <div className="space-y-4">
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Ready to draft emails for <strong className="text-white">{selectedCount} selected lead(s)</strong>.
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Ready to draft emails for <strong className="text-slate-900">{selectedCount} selected lead(s)</strong>.
                 </p>
 
                 {/* Sent Protection Notice */}
-                <div className="p-3 bg-emerald-950/40 border border-emerald-800/40 rounded-xl text-xs text-emerald-300 flex items-start gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <p className="text-[11px] leading-relaxed">
                     <strong>Sent Email Protection is Active</strong>: Any lead that has already received an email will automatically be protected and skipped. No duplicate emails will be sent.
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-xs font-semibold text-slate-300">Select AI Model Provider:</label>
+                  <label className="text-xs font-semibold text-slate-700">Select AI Model Provider:</label>
 
                   <div className="space-y-2">
                     {/* Groq AI Option */}
                     <label
                       className={`p-3 rounded-xl border flex flex-col gap-2 cursor-pointer transition-all ${
                         aiProvider === 'groq'
-                          ? 'bg-indigo-950/50 border-indigo-500 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                          ? 'bg-indigo-50/70 border-indigo-500 text-slate-900 shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -935,21 +935,21 @@ export default function LeadsPage() {
                           name="provider"
                           checked={aiProvider === 'groq'}
                           onChange={() => setAiProvider('groq')}
-                          className="accent-indigo-500"
+                          className="accent-indigo-600"
                         />
                         <div>
-                          <p className="text-xs font-bold text-emerald-400">Groq AI (Ultra Fast Llama Models)</p>
-                          <p className="text-[10px] text-slate-400">High speed Llama 3.3 70B & 3.1 8B models</p>
+                          <p className="text-xs font-bold text-indigo-700">Groq AI (Ultra Fast Llama Models)</p>
+                          <p className="text-[10px] text-slate-500">High speed Llama 3.3 70B & 3.1 8B models</p>
                         </div>
                       </div>
 
                       {aiProvider === 'groq' && (
                         <div className="pl-6 pt-1 text-xs space-y-1">
-                          <label className="font-semibold text-slate-300 text-[11px]">Select Groq Model:</label>
+                          <label className="font-semibold text-slate-700 text-[11px]">Select Groq Model:</label>
                           <select
                             value={groqModel}
                             onChange={(e) => setGroqModel(e.target.value)}
-                            className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs font-mono"
+                            className="w-full p-2 rounded-lg bg-white border border-slate-300 text-slate-800 text-xs font-mono"
                           >
                             <option value="groq/compound">groq/compound (Ultra Fast - Recommended)</option>
                             <option value="groq/compound-mini">groq/compound-mini (Lightning Fast)</option>
@@ -965,8 +965,8 @@ export default function LeadsPage() {
                     <label
                       className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                         aiProvider === 'claude'
-                          ? 'bg-indigo-950/50 border-indigo-500 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                          ? 'bg-indigo-50/70 border-indigo-500 text-slate-900 shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -975,11 +975,11 @@ export default function LeadsPage() {
                           name="provider"
                           checked={aiProvider === 'claude'}
                           onChange={() => setAiProvider('claude')}
-                          className="accent-indigo-500"
+                          className="accent-indigo-600"
                         />
                         <div>
-                          <p className="text-xs font-semibold">Anthropic Claude Haiku 4.5</p>
-                          <p className="text-[10px] text-slate-400">claude-haiku-4-5 model</p>
+                          <p className="text-xs font-semibold text-slate-800">Anthropic Claude Haiku 4.5</p>
+                          <p className="text-[10px] text-slate-500">claude-haiku-4-5 model</p>
                         </div>
                       </div>
                     </label>
@@ -988,8 +988,8 @@ export default function LeadsPage() {
                     <label
                       className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                         aiProvider === 'gemini'
-                          ? 'bg-indigo-950/50 border-indigo-500 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                          ? 'bg-indigo-50/70 border-indigo-500 text-slate-900 shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -998,11 +998,11 @@ export default function LeadsPage() {
                           name="provider"
                           checked={aiProvider === 'gemini'}
                           onChange={() => setAiProvider('gemini')}
-                          className="accent-indigo-500"
+                          className="accent-indigo-600"
                         />
                         <div>
-                          <p className="text-xs font-semibold">Google Gemini Flash (gemini-flash-latest)</p>
-                          <p className="text-[10px] text-slate-400">Fast structured JSON generation</p>
+                          <p className="text-xs font-semibold text-slate-800">Google Gemini Flash (gemini-flash-latest)</p>
+                          <p className="text-[10px] text-slate-500">Fast structured JSON generation</p>
                         </div>
                       </div>
                     </label>
@@ -1012,7 +1012,7 @@ export default function LeadsPage() {
                 <button
                   onClick={handleStartGeneration}
                   disabled={generating}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                 >
                   <Sparkles className="w-4 h-4 text-cyan-200" /> Start Real-time AI Generation
                 </button>
@@ -1024,38 +1024,38 @@ export default function LeadsPage() {
 
       {/* IMAP Setup Guidance Modal (when App Password is not yet entered) */}
       {imapModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-sm font-bold text-white">Gmail Reply Sync Setup</h3>
+                <Mail className="w-5 h-5 text-cyan-600" />
+                <h3 className="text-sm font-bold text-slate-900">Gmail Reply Sync Setup</h3>
               </div>
-              <button onClick={() => setImapModalOpen(false)} className="text-slate-400 hover:text-white text-xs">
+              <button onClick={() => setImapModalOpen(false)} className="text-slate-400 hover:text-slate-700 text-xs">
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              To automatically detect recruiter replies sent to <strong className="text-white">yuvamk6@gmail.com</strong>, your account needs an App Password:
+            <p className="text-xs text-slate-600 leading-relaxed">
+              To automatically detect recruiter replies sent to <strong className="text-slate-900">yuvamk6@gmail.com</strong>, your account needs an App Password:
             </p>
 
-            <ol className="list-decimal list-inside text-[11px] text-slate-400 space-y-1.5 p-3 rounded-xl bg-slate-950 border border-slate-800">
-              <li>Open your Google Account: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-cyan-400 underline">myaccount.google.com/apppasswords</a></li>
+            <ol className="list-decimal list-inside text-[11px] text-slate-600 space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <li>Open your Google Account: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-cyan-600 underline">myaccount.google.com/apppasswords</a></li>
               <li>Under 2-Step Verification, create an <strong>App password</strong> (e.g. named &quot;ReachOut AI&quot;).</li>
-              <li>Copy the 16-letter password and paste it into <strong className="text-slate-300">Settings</strong> or <code className="text-cyan-300 font-mono">.env.local</code> as <code className="text-cyan-300 font-mono">IMAP_PASS</code>.</li>
+              <li>Copy the 16-letter password and paste it into <strong className="text-slate-800">Settings</strong> or <code className="text-cyan-700 font-mono">.env.local</code> as <code className="text-cyan-700 font-mono">IMAP_PASS</code>.</li>
             </ol>
 
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={() => setImapModalOpen(false)}
-                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
               >
                 Close
               </button>
               <Link
                 href="/settings"
-                className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold text-center"
+                className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold text-center shadow-md shadow-cyan-600/20"
               >
                 Go to Settings
               </Link>
