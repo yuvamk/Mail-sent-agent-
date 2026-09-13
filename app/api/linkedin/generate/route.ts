@@ -5,7 +5,6 @@ import { generateLinkedInPost } from '@/lib/linkedin-ai';
 import {
   extractArticleImage,
   generateGeminiImage,
-  buildFluxImageUrl,
 } from '@/lib/news-fetcher';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +12,15 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const userId = await getUserIdFromRequest(req, body.userId);
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized. Please sign in to generate posts.' },
+        { status: 401 }
+      );
+    }
+
     const {
       topic,
       summary,
@@ -31,7 +39,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userId = await getUserIdFromRequest(req);
     const creds = await getUserCredentials(userId);
 
     // 1. Generate LinkedIn Post with AI
@@ -43,12 +50,12 @@ export async function POST(req: NextRequest) {
         sourceName,
         tone,
         aiProvider,
-        authorName: creds.candidateName || 'Yuvam Kumar',
+        authorName: creds.candidateName || 'Tech Innovator',
       },
       creds
     );
 
-    // 2. Generate a custom, contextual image using Gemini matching the post content and lines!
+    // 2. Generate a custom, contextual image using Gemini matching the post content and lines
     const geminiImg = await generateGeminiImage(
       generated.postContent,
       topic,
@@ -78,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
     const newPostData = {
-      user_id: userId || null,
+      user_id: userId,
       topic,
       source_url: sourceUrl || null,
       source_title: summary || topic,

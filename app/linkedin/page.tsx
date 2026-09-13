@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   Linkedin,
   Sparkles,
@@ -99,6 +101,11 @@ export default function LinkedInStudioPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [profileName, setProfileName] = useState<string | null>(null);
 
+  // Authentication State
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const router = useRouter();
+
   // UI Feedback
   const [copied, setCopied] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -106,12 +113,34 @@ export default function LinkedInStudioPage() {
   const [tokenInput, setTokenInput] = useState('');
   const [isSavingToken, setIsSavingToken] = useState(false);
 
-  // Initial Load
+  // Initial Load: Enforce Authentication & Scoped Fetch
   useEffect(() => {
-    fetchNews();
-    checkAuth();
-    loadPastPosts();
-  }, []);
+    async function initSession() {
+      try {
+        const { data: { session } } = await supabaseBrowser.auth.getSession();
+        if (!session?.user) {
+          router.push('/login?redirect=/linkedin');
+          return;
+        }
+
+        const uid = session.user.id;
+        const token = session.access_token;
+        setCurrentUserId(uid);
+
+        await Promise.all([
+          fetchNews(),
+          checkAuth(uid, token),
+          loadPastPosts(uid, token),
+        ]);
+      } catch (err) {
+        console.error('LinkedIn studio auth check failed:', err);
+        router.push('/login?redirect=/linkedin');
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+    initSession();
+  }, [router]);
 
   const showStatus = (type: 'success' | 'error' | 'info', text: string) => {
     setStatusMessage({ type, text });
@@ -136,20 +165,30 @@ export default function LinkedInStudioPage() {
     }
   };
 
-  const checkAuth = async () => {
+  const checkAuth = async (uid?: string, token?: string) => {
     try {
-      const res = await fetch('/api/linkedin/auth');
+      const userId = uid || currentUserId;
+      if (!userId) return;
+      const headers: Record<string, string> = { 'x-user-id': userId };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/linkedin/auth?userId=${userId}`, { headers });
       const data = await res.json();
-      setIsConnected(data.isConnected);
+      setIsConnected(Boolean(data.isConnected));
       if (data.profileName) setProfileName(data.profileName);
     } catch {
       setIsConnected(false);
     }
   };
 
-  const loadPastPosts = async () => {
+  const loadPastPosts = async (uid?: string, token?: string) => {
     try {
-      const res = await fetch('/api/linkedin/posts');
+      const userId = uid || currentUserId;
+      if (!userId) return;
+      const headers: Record<string, string> = { 'x-user-id': userId };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/linkedin/posts?userId=${userId}`, { headers });
       const data = await res.json();
       if (data.success && data.posts) {
         setPastPosts(data.posts);
@@ -207,8 +246,12 @@ export default function LinkedInStudioPage() {
     try {
       const res = await fetch('/api/linkedin/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId || '',
+        },
         body: JSON.stringify({
+          userId: currentUserId,
           topic: topicToUse,
           summary: articleToUse?.summary || topicToUse,
           sourceUrl: articleToUse?.sourceUrl || '',
@@ -265,10 +308,16 @@ export default function LinkedInStudioPage() {
 
     setIsPublishing(true);
     try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
       const res = await fetch('/api/linkedin/publish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'x-user-id': currentUserId || '',
+        },
         body: JSON.stringify({
+          userId: currentUserId,
           id: currentPost?.id,
           post_content: postContent,
           image_url: imageUrl || null,
@@ -322,8 +371,9 @@ export default function LinkedInStudioPage() {
     try {
       const res = await fetch('/api/linkedin/visual', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': currentUserId || '' },
         body: JSON.stringify({
+          userId: currentUserId,
           postContent,
           topic: currentPost?.topic || selectedArticle?.title || 'AI & Tech Research',
         }),
@@ -355,10 +405,18 @@ export default function LinkedInStudioPage() {
     if (!tokenInput.trim()) return;
     setIsSavingToken(true);
     try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
       const res = await fetch('/api/linkedin/auth', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken: tokenInput.trim() }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'x-user-id': currentUserId || '',
+        },
+        body: JSON.stringify({
+          userId: currentUserId,
+          accessToken: tokenInput.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -377,6 +435,44 @@ export default function LinkedInStudioPage() {
       setIsSavingToken(false);
     }
   };
+
+  // Disconnect LinkedIn Account
+  const handleDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect your LinkedIn account?')) return;
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch(`/api/linkedin/auth?userId=${currentUserId || ''}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'x-user-id': currentUserId || '',
+        },
+      });
+      if (res.ok) {
+        setIsConnected(false);
+        setProfileName(null);
+        showStatus('info', 'LinkedIn account disconnected successfully.');
+      } else {
+        showStatus('error', 'Failed to disconnect account');
+      }
+    } catch {
+      showStatus('error', 'Network error disconnecting account');
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center animate-pulse shadow-lg shadow-blue-500/25">
+          <Linkedin className="w-6 h-6 text-white" />
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-bold text-white">Verifying Secure Session...</p>
+          <p className="text-xs text-slate-500">Loading your private LinkedIn Studio & credentials</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
@@ -403,7 +499,7 @@ export default function LinkedInStudioPage() {
         </div>
 
         {/* Account Connection Status */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowTokenModal(true)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border ${
@@ -416,13 +512,23 @@ export default function LinkedInStudioPage() {
             {isConnected ? `Connected: ${profileName || 'LinkedIn'}` : 'Connect LinkedIn API'}
           </button>
 
+          {isConnected && (
+            <button
+              onClick={handleDisconnect}
+              className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-red-950/60 hover:border-red-800 border border-slate-800 text-slate-400 hover:text-red-300 text-xs font-semibold transition-all"
+              title="Disconnect LinkedIn Account"
+            >
+              Disconnect
+            </button>
+          )}
+
           <button
             onClick={fetchNews}
             disabled={isFetchingNews}
             className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isFetchingNews ? 'animate-spin text-cyan-400' : ''}`} />
-            Refresh News Feed
+            Refresh News
           </button>
         </div>
       </div>
@@ -1172,11 +1278,21 @@ export default function LinkedInStudioPage() {
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Your account <strong className="text-white">{profileName || 'Yuvam Kumar'}</strong> is currently active and authorized with <code className="bg-slate-950 px-1.5 py-0.5 rounded text-cyan-300">w_member_social</code> permissions.
+              {isConnected ? (
+                <>
+                  Your personal profile <strong className="text-emerald-400">{profileName || 'LinkedIn User'}</strong> is connected with <code className="bg-slate-950 px-1.5 py-0.5 rounded text-cyan-300">w_member_social</code> scope. You can update your token below or disconnect.
+                </>
+              ) : (
+                <>
+                  Connect your personal LinkedIn profile to enable 1-click publishing. Enter your LinkedIn OAuth Access Token with <code className="bg-slate-950 px-1.5 py-0.5 rounded text-cyan-300">w_member_social</code> permission.
+                </>
+              )}
             </p>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-400">Update LinkedIn Access Token:</label>
+              <label className="text-xs font-semibold text-slate-400">
+                {isConnected ? 'Replace LinkedIn Access Token:' : 'LinkedIn Access Token:'}
+              </label>
               <textarea
                 rows={3}
                 value={tokenInput}
@@ -1186,15 +1302,26 @@ export default function LinkedInStudioPage() {
               />
             </div>
 
-            <div className="pt-2 flex gap-2">
+            <div className="pt-2 flex flex-wrap gap-2">
               <button
                 onClick={handleSaveToken}
                 disabled={isSavingToken || !tokenInput.trim()}
                 className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
                 {isSavingToken ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
-                Update Token
+                {isConnected ? 'Update Token' : 'Connect Account'}
               </button>
+              {isConnected && (
+                <button
+                  onClick={() => {
+                    setShowTokenModal(false);
+                    handleDisconnect();
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-red-950/60 hover:bg-red-900/60 border border-red-800 text-red-300 text-xs font-semibold transition-colors"
+                >
+                  Disconnect
+                </button>
+              )}
               <button
                 onClick={() => setShowTokenModal(false)}
                 className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
@@ -1238,7 +1365,7 @@ export default function LinkedInStudioPage() {
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
               <div className="flex items-center justify-between text-xs border-b border-slate-800/80 pb-2">
                 <span className="text-slate-400">Author Account:</span>
-                <span className="font-bold text-white">{profileName || 'Yuvam Kumar'}</span>
+                <span className="font-bold text-white">{profileName || 'Your Profile'}</span>
               </div>
               <div className="flex items-center justify-between text-xs border-b border-slate-800/80 pb-2">
                 <span className="text-slate-400">Story Topic:</span>

@@ -6,22 +6,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserIdFromRequest(req);
-    const supabase = createAdminClient();
-
-    let query = supabase
-      .from('linkedin_posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(30);
-
-    if (userId) {
-      query = query.or(`user_id.eq.${userId},user_id.is.null`);
+    if (!userId) {
+      return NextResponse.json({ success: true, posts: [] });
     }
 
-    const { data, error } = await query;
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from('linkedin_posts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     if (error) {
-      // Return empty array if table doesn't exist yet
       return NextResponse.json({ success: true, posts: [] });
     }
 
@@ -34,6 +32,12 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
+    const userId = await getUserIdFromRequest(req, body.userId);
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id, post_content, image_url, status } = body;
 
     if (!id) {
@@ -50,8 +54,9 @@ export async function PUT(req: NextRequest) {
       .from('linkedin_posts')
       .update(updateData)
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -65,6 +70,11 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
@@ -73,7 +83,11 @@ export async function DELETE(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
-    const { error } = await supabase.from('linkedin_posts').delete().eq('id', id);
+    const { error } = await supabase
+      .from('linkedin_posts')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });

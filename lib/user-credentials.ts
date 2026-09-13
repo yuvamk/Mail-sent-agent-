@@ -16,6 +16,9 @@ export interface UserDynamicCredentials {
   candidatePhone: string;
   githubUrl: string;
   linkedinUrl: string;
+  linkedinAccessToken: string;
+  linkedinPersonUrn: string;
+  isAdmin: boolean;
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `You are a professional career outreach strategist writing cold job outreach emails to HR representatives or recruiters.
@@ -31,6 +34,31 @@ RULES:
 7. Do NOT include generic filler. Speak directly and professionally.`;
 
 export async function getUserCredentials(userId?: string | null): Promise<UserDynamicCredentials> {
+  const adminEmails = (process.env.ADMIN_EMAILS || 'yuvamk6@gmail.com')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  let userEmail: string | null = null;
+  let userIsAdmin = false;
+
+  if (userId) {
+    try {
+      const supabase = createAdminClient();
+      const { data: userData } = await supabase.auth.admin.getUserById(userId);
+      if (userData?.user?.email) {
+        userEmail = userData.user.email.toLowerCase();
+        if (adminEmails.includes(userEmail)) {
+          userIsAdmin = true;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const isPlatformAdmin = userIsAdmin || (!userId && Boolean(process.env.MY_NAME));
+
   const envDefaults: UserDynamicCredentials = {
     userId: userId || null,
     customSystemPrompt: DEFAULT_SYSTEM_PROMPT,
@@ -39,14 +67,17 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
     groqApiKey: process.env.GROQ_API_KEY || '',
     smtpHost: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
     smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
-    smtpUser: process.env.SMTP_USER || 'b8decd001@smtp-brevo.com',
+    smtpUser: process.env.SMTP_USER || '',
     smtpPass: process.env.SMTP_PASS || '',
-    smtpFromEmail: process.env.SMTP_FROM_EMAIL || 'yuvamk6@gmail.com',
+    smtpFromEmail: isPlatformAdmin ? (process.env.SMTP_FROM_EMAIL || 'yuvamk6@gmail.com') : (userEmail || ''),
     brevoApiKey: process.env.BREVO_API_KEY || '',
-    candidateName: process.env.MY_NAME || 'Yuvam Kumar',
-    candidatePhone: process.env.MY_PHONE || '8650825573',
-    githubUrl: process.env.MY_GITHUB || 'https://github.com/yuvamk',
-    linkedinUrl: process.env.MY_LINKEDIN || 'https://www.linkedin.com/in/yuvam-kumar-637712227',
+    candidateName: isPlatformAdmin ? (process.env.MY_NAME || 'Yuvam Kumar') : '',
+    candidatePhone: isPlatformAdmin ? (process.env.MY_PHONE || '') : '',
+    githubUrl: isPlatformAdmin ? (process.env.MY_GITHUB || '') : '',
+    linkedinUrl: isPlatformAdmin ? (process.env.MY_LINKEDIN || '') : '',
+    linkedinAccessToken: isPlatformAdmin ? (process.env.LINKEDIN_ACCESS_TOKEN || '') : '',
+    linkedinPersonUrn: isPlatformAdmin ? (process.env.LINKEDIN_PERSON_URN || '') : '',
+    isAdmin: isPlatformAdmin,
   };
 
   if (!userId) return envDefaults;
@@ -77,6 +108,9 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
       candidatePhone: dbSettings.candidate_phone?.trim() || envDefaults.candidatePhone,
       githubUrl: dbSettings.github_url?.trim() || envDefaults.githubUrl,
       linkedinUrl: dbSettings.linkedin_url?.trim() || envDefaults.linkedinUrl,
+      linkedinAccessToken: dbSettings.linkedin_access_token?.trim() || envDefaults.linkedinAccessToken,
+      linkedinPersonUrn: dbSettings.linkedin_person_urn?.trim() || envDefaults.linkedinPersonUrn,
+      isAdmin: dbSettings.is_admin ?? envDefaults.isAdmin,
     };
   } catch (e) {
     console.warn('Error fetching dynamic user credentials from DB, fallback to env:', e);

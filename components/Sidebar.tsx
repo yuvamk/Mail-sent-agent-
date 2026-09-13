@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase-browser';
@@ -19,9 +19,17 @@ import {
   UserCheck,
   Cat,
   Linkedin,
+  ShieldCheck,
 } from 'lucide-react';
 
-const navItems = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  badge?: string;
+}
+
+const baseNavItems: NavItem[] = [
   { name: 'Leads Dashboard', href: '/leads', icon: Users },
   { name: 'Import Excel', href: '/import', icon: FileSpreadsheet },
   { name: 'Resume Manager', href: '/resume', icon: FileText },
@@ -36,6 +44,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   // Restore collapsed preference from localStorage
@@ -65,17 +74,38 @@ export default function Sidebar() {
 
   useEffect(() => {
     supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
-      setUserEmail(session?.user?.email || null);
+      const email = session?.user?.email || null;
+      setUserEmail(email);
+      checkAdminStatus(email);
     });
 
     const { data: authListener } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email || null);
+      const email = session?.user?.email || null;
+      setUserEmail(email);
+      checkAdminStatus(email);
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  const checkAdminStatus = (email: string | null) => {
+    if (!email) {
+      setIsAdmin(false);
+      return;
+    }
+    const adminEmails = ['yuvamk6@gmail.com'];
+    setIsAdmin(adminEmails.includes(email.toLowerCase()));
+  };
+
+  const navItems = useMemo(() => {
+    if (!isAdmin) return baseNavItems;
+    return [
+      ...baseNavItems,
+      { name: 'Admin Dashboard', href: '/admin', icon: ShieldCheck, badge: 'ADMIN' },
+    ];
+  }, [isAdmin]);
 
   const toggleSidebar = () => {
     setIsCollapsed((prev) => {
@@ -92,6 +122,7 @@ export default function Sidebar() {
   const handleLogout = async () => {
     await supabaseBrowser.auth.signOut();
     setUserEmail(null);
+    setIsAdmin(false);
     router.push('/login');
   };
 
@@ -106,27 +137,24 @@ export default function Sidebar() {
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
+      {/* Top Branding & Navigation */}
       <div>
-        {/* Brand Header with Single Cute Toggle Icon Button */}
-        <div
-          className={`border-b border-slate-800 transition-all duration-300 ${
-            isCollapsed ? 'p-3.5 flex justify-center' : 'p-4 sm:p-5 flex items-center justify-between'
-          }`}
-        >
+        {/* Brand Header */}
+        <div className={`flex items-center justify-between border-b border-slate-800 transition-all duration-300 ${isCollapsed ? 'p-3 flex-col gap-3' : 'p-4'}`}>
           {isCollapsed ? (
-            /* Single Cute Toggle Button when Collapsed */
-            <div className="relative group flex justify-center">
+            /* Collapsed Brand Icon & Open Button */
+            <div className="flex flex-col items-center gap-2 group relative">
               <button
                 onClick={toggleSidebar}
-                id="btn-sidebar-toggle"
+                id="btn-sidebar-toggle-collapsed"
                 title="Open sidebar 🐱 (⌘B)"
                 aria-label="Open sidebar"
-                className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white hover:shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                className="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
               >
-                <Cat className="w-6 h-6 transition-transform duration-200 group-hover:rotate-12" />
+                <Sparkles className="w-5 h-5 text-white" />
               </button>
-              {/* Tooltip */}
-              <div className="pointer-events-none absolute left-full ml-3.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-900/95 text-slate-100 text-xs font-semibold rounded-lg shadow-2xl border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0 flex items-center gap-2 backdrop-blur-md">
+              {/* Floating Tooltip */}
+              <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-900 text-slate-100 text-xs font-semibold rounded-lg shadow-xl border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0 flex items-center gap-1.5 backdrop-blur-md">
                 <span>Open sidebar 🐱 (⌘B)</span>
               </div>
             </div>
@@ -175,15 +203,22 @@ export default function Sidebar() {
                     className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 font-semibold'
+                        : item.badge
+                        ? 'text-rose-400 hover:text-rose-200 hover:bg-rose-950/40 border border-rose-900/40'
                         : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70'
                     }`}
                   >
-                    <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-cyan-300' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                    <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-cyan-300' : item.badge ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
                   </Link>
 
                   {/* Floating Tooltip */}
                   <div className="pointer-events-none absolute left-full ml-3.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-900/95 text-slate-100 text-xs font-semibold rounded-lg shadow-2xl border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0 flex items-center gap-2 backdrop-blur-md">
                     <span>{item.name}</span>
+                    {item.badge && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        {item.badge}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -197,11 +232,18 @@ export default function Sidebar() {
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? 'bg-gradient-to-r from-blue-600/90 to-indigo-600/90 text-white shadow-md shadow-blue-600/20 font-semibold'
+                    : item.badge
+                    ? 'text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border border-rose-900/40 font-semibold'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
                 }`}
               >
-                <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-cyan-300' : 'text-slate-400'}`} />
+                <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-cyan-300' : item.badge ? 'text-rose-400' : 'text-slate-400'}`} />
                 <span className="truncate">{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}

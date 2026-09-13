@@ -97,38 +97,91 @@ export default function SettingsPage() {
     try {
       const { data: { session } } = await supabaseBrowser.auth.getSession();
 
-      const res = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
-        },
-        body: JSON.stringify({
-          userId: session?.user?.id,
-          CUSTOM_SYSTEM_PROMPT: customPrompt,
-          MY_NAME: candidateName,
-          MY_PHONE: candidatePhone,
-          MY_GITHUB: githubUrl,
-          MY_LINKEDIN: linkedinUrl,
-          ANTHROPIC_API_KEY: anthropicKey,
-          GEMINI_API_KEY: geminiKey,
-          GROQ_API_KEY: groqKey,
-          SMTP_HOST: smtpHost,
-          SMTP_PORT: smtpPort,
-          SMTP_USER: smtpUser,
-          SMTP_PASS: smtpPass,
-          SMTP_FROM_EMAIL: smtpFrom,
-          BREVO_API_KEY: brevoApiKey,
-        }),
-      });
-
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Dynamic prompt & credentials saved successfully to database!' });
-      } else {
-        setMessage({ type: 'error', text: 'Failed to save settings to database.' });
+      if (!session?.user?.id) {
+        setMessage({ type: 'error', text: 'Session expired or not found. Please log in again.' });
+        router.push('/login');
+        return;
       }
-    } catch (e) {
-      setMessage({ type: 'error', text: 'Error saving settings.' });
+
+      const payload = {
+        user_id: session.user.id,
+        custom_system_prompt: customPrompt,
+        candidate_name: candidateName,
+        candidate_phone: candidatePhone,
+        github_url: githubUrl,
+        linkedin_url: linkedinUrl,
+        anthropic_api_key: anthropicKey,
+        gemini_api_key: geminiKey,
+        groq_api_key: groqKey,
+        smtp_host: smtpHost,
+        smtp_port: smtpPort,
+        smtp_user: smtpUser,
+        smtp_pass: smtpPass,
+        smtp_from_email: smtpFrom,
+        brevo_api_key: brevoApiKey,
+        updated_at: new Date().toISOString(),
+      };
+
+      let saved = false;
+      let lastErrorMessage = '';
+
+      // Primary Channel: Server API endpoint
+      try {
+        const res = await fetch(`/api/settings?userId=${session.user.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token || ''}`,
+            'x-user-id': session.user.id,
+          },
+          body: JSON.stringify({
+            userId: session.user.id,
+            CUSTOM_SYSTEM_PROMPT: customPrompt,
+            MY_NAME: candidateName,
+            MY_PHONE: candidatePhone,
+            MY_GITHUB: githubUrl,
+            MY_LINKEDIN: linkedinUrl,
+            ANTHROPIC_API_KEY: anthropicKey,
+            GEMINI_API_KEY: geminiKey,
+            GROQ_API_KEY: groqKey,
+            SMTP_HOST: smtpHost,
+            SMTP_PORT: smtpPort,
+            SMTP_USER: smtpUser,
+            SMTP_PASS: smtpPass,
+            SMTP_FROM_EMAIL: smtpFrom,
+            BREVO_API_KEY: brevoApiKey,
+          }),
+        });
+
+        const resData = await res.json();
+        if (res.ok && resData.success) {
+          saved = true;
+        } else {
+          lastErrorMessage = resData.error || 'Server error';
+          console.warn('API save returned non-ok, initiating direct client fallback:', lastErrorMessage);
+        }
+      } catch (apiErr: any) {
+        lastErrorMessage = apiErr?.message || 'Network error';
+        console.warn('API save fetch threw error, initiating direct client fallback:', apiErr);
+      }
+
+      // Secondary Channel: Direct Supabase Client Fallback (guarantees saving even if server environment lacks service key)
+      if (!saved) {
+        const { error: directErr } = await supabaseBrowser
+          .from('user_settings')
+          .upsert(payload, { onConflict: 'user_id' });
+
+        if (!directErr) {
+          saved = true;
+        } else {
+          throw new Error(directErr.message || lastErrorMessage);
+        }
+      }
+
+      setMessage({ type: 'success', text: 'Dynamic prompt & credentials saved successfully to database!' });
+    } catch (e: any) {
+      console.error('Save error:', e);
+      setMessage({ type: 'error', text: e?.message || 'Error saving settings to database.' });
     } finally {
       setSaving(false);
     }
