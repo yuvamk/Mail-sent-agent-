@@ -33,6 +33,8 @@ import {
   Info,
   Eye,
   XCircle,
+  Calendar,
+  X,
 } from 'lucide-react';
 
 interface Lead {
@@ -70,6 +72,7 @@ export default function LeadsPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unsent' | 'drafted' | 'sent' | 'replied' | 'valid' | 'url'>('all');
   const [expFilter, setExpFilter] = useState<string>('all');
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('latest'); // 'latest' | 'all' | 'YYYY-MM-DD'
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -166,36 +169,137 @@ export default function LeadsPage() {
     };
   }, []);
 
-  // Filter leads based on search query, filter tabs, and experience
-  const filteredLeads = leads.filter((l) => {
-    // Tab filters
-    if (filterType === 'unsent' && (['sent', 'delivered', 'opened', 'replied'].includes(l.draftStatus || '') || !l.has_valid_email)) return false;
-    if (filterType === 'drafted' && l.draftStatus !== 'drafted' && l.draftStatus !== 'reviewed' && l.draftStatus !== 'approved') return false;
-    if (filterType === 'sent' && !['sent', 'delivered', 'opened'].includes(l.draftStatus || '')) return false;
-    if (filterType === 'replied' && l.draftStatus !== 'replied') return false;
-    if (filterType === 'valid' && !l.has_valid_email) return false;
-    if (filterType === 'url' && l.has_valid_email) return false;
-
-    // Experience Filter
-    if (expFilter !== 'all') {
-      const expText = (l.experience || '').toLowerCase();
-      if (expFilter === '0-1' && !expText.includes('0') && !expText.includes('1')) return false;
-      if (expFilter === '1-3' && !expText.includes('1') && !expText.includes('2') && !expText.includes('3')) return false;
-      if (expFilter === '3-5' && !expText.includes('3') && !expText.includes('4') && !expText.includes('5')) return false;
-      if (expFilter === '5+' && !expText.includes('5') && !expText.includes('6') && !expText.includes('7') && !expText.includes('8') && !expText.includes('10')) return false;
+  // 1. Helper to extract clean YYYY-MM-DD upload date
+  const getLeadDateKey = (lead: Lead): string => {
+    const raw = lead.imported_at || (lead as any).created_at;
+    if (!raw) return 'Unknown';
+    try {
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return 'Unknown';
+      return d.toISOString().split('T')[0];
+    } catch {
+      return 'Unknown';
     }
+  };
 
-    const query = search.toLowerCase().trim();
-    if (!query) return true;
+  // 2. Build list of distinct Excel upload batches with metadata & counts
+  const uploadBatches = React.useMemo(() => {
+    const dateMap = new Map<
+      string,
+      { date: string; count: number; filenames: Set<string>; latestTimestamp: number }
+    >();
 
-    return (
-      (l.company && l.company.toLowerCase().includes(query)) ||
-      (l.key_skills && l.key_skills.toLowerCase().includes(query)) ||
-      (l.email && l.email.toLowerCase().includes(query)) ||
-      (l.location && l.location.toLowerCase().includes(query)) ||
-      (l.experience && l.experience.toLowerCase().includes(query))
-    );
-  });
+    leads.forEach((l) => {
+      const key = getLeadDateKey(l);
+      if (key === 'Unknown') return;
+      const ts = new Date(l.imported_at || (l as any).created_at).getTime() || 0;
+      if (!dateMap.has(key)) {
+        dateMap.set(key, { date: key, count: 0, filenames: new Set<string>(), latestTimestamp: ts });
+      }
+      const entry = dateMap.get(key)!;
+      entry.count++;
+      if (l.source_file) entry.filenames.add(l.source_file);
+      if (ts > entry.latestTimestamp) entry.latestTimestamp = ts;
+    });
+
+    return Array.from(dateMap.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+  }, [leads]);
+
+  // The latest upload date key
+  const latestDateKey = uploadBatches.length > 0 ? uploadBatches[0].date : null;
+
+  // 3. Date-Scoped Leads: filter by chosen Excel upload batch
+  const dateScopedLeads = React.useMemo(() => {
+    if (selectedDateFilter === 'all' || !latestDateKey) {
+      return leads;
+    }
+    const targetDate = selectedDateFilter === 'latest' ? latestDateKey : selectedDateFilter;
+    return leads.filter((l) => getLeadDateKey(l) === targetDate);
+  }, [leads, selectedDateFilter, latestDateKey]);
+
+  // 4. Dynamic, 100% accurate tab counts computed from dateScopedLeads
+  const dynamicCounts = React.useMemo(() => {
+    let unsent = 0;
+    let drafted = 0;
+    let sent = 0;
+    let replied = 0;
+    let validEmail = 0;
+    let urlOnly = 0;
+
+    dateScopedLeads.forEach((l) => {
+      const s = l.draftStatus;
+      if (l.has_valid_email) validEmail++;
+      else urlOnly++;
+
+      if (s === 'replied') {
+        replied++;
+      } else if (s === 'sent' || s === 'delivered' || s === 'opened') {
+        sent++;
+      } else if (s === 'drafted' || s === 'reviewed' || s === 'approved') {
+        drafted++;
+      } else if (l.has_valid_email) {
+        unsent++;
+      }
+    });
+
+    return {
+      all: dateScopedLeads.length,
+      unsent,
+      drafted,
+      sent,
+      replied,
+      validEmail,
+      urlOnly,
+    };
+  }, [dateScopedLeads]);
+
+  // 5. Filter leads based on global search, filter tabs, and experience
+  const filteredLeads = React.useMemo(() => {
+    return dateScopedLeads.filter((l) => {
+      // Tab filters
+      if (filterType === 'unsent') {
+        if (!l.has_valid_email || ['sent', 'delivered', 'opened', 'replied'].includes(l.draftStatus || '')) return false;
+      } else if (filterType === 'drafted') {
+        if (!['drafted', 'reviewed', 'approved'].includes(l.draftStatus || '')) return false;
+      } else if (filterType === 'sent') {
+        if (!['sent', 'delivered', 'opened'].includes(l.draftStatus || '')) return false;
+      } else if (filterType === 'replied') {
+        if (l.draftStatus !== 'replied') return false;
+      } else if (filterType === 'valid') {
+        if (!l.has_valid_email) return false;
+      } else if (filterType === 'url') {
+        if (l.has_valid_email) return false;
+      }
+
+      // Experience Filter
+      if (expFilter !== 'all') {
+        const expText = (l.experience || '').toLowerCase();
+        if (expFilter === '0-1' && !expText.includes('0') && !expText.includes('1')) return false;
+        if (expFilter === '1-3' && !expText.includes('1') && !expText.includes('2') && !expText.includes('3')) return false;
+        if (expFilter === '3-5' && !expText.includes('3') && !expText.includes('4') && !expText.includes('5')) return false;
+        if (expFilter === '5+' && !expText.includes('5') && !expText.includes('6') && !expText.includes('7') && !expText.includes('8') && !expText.includes('10')) return false;
+      }
+
+      // Global multi-field search across company, skills, email, location, experience, salary, contact, filename, status & raw_data
+      const query = search.toLowerCase().trim();
+      if (!query) return true;
+
+      const rawStrings = l.raw_data ? Object.values(l.raw_data).map((v) => String(v || '')) : [];
+
+      return [
+        l.company,
+        l.key_skills,
+        l.email,
+        l.location,
+        l.experience,
+        l.salary,
+        l.contact_number,
+        l.source_file,
+        l.draftStatus,
+        ...rawStrings,
+      ].some((val) => val && String(val).toLowerCase().includes(query));
+    });
+  }, [dateScopedLeads, filterType, expFilter, search]);
 
   // Eligible leads for AI drafting: has valid email AND NOT already sent or replied!
   const eligibleUnsentLeadIds = filteredLeads
@@ -528,71 +632,214 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="p-4 rounded-2xl bg-white border border-slate-200 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-sm">
-        <div className="relative w-full lg:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search company, skills, exp, email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-400 transition-colors"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-          {/* Experience Filter */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-700">
-            <Briefcase className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="font-semibold text-slate-500">Exp:</span>
-            <select
-              value={expFilter}
-              onChange={(e) => setExpFilter(e.target.value)}
-              className="bg-transparent text-slate-900 focus:outline-none cursor-pointer text-xs"
-            >
-              <option value="all" className="bg-white text-slate-800">All Experience</option>
-              <option value="0-1" className="bg-white text-slate-800">0 - 1 Years</option>
-              <option value="1-3" className="bg-white text-slate-800">1 - 3 Years</option>
-              <option value="3-5" className="bg-white text-slate-800">3 - 5 Years</option>
-              <option value="5+" className="bg-white text-slate-800">5+ Years</option>
-            </select>
+      {/* Upload Batch Notification Banner */}
+      {uploadBatches.length > 0 && (
+        <div className="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-2.5 text-indigo-950">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-bold">
+                {selectedDateFilter === 'latest' ? (
+                  <>
+                    Viewing <span className="text-indigo-600">Most Recent Upload</span> ({new Date(latestDateKey!).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })})
+                  </>
+                ) : selectedDateFilter === 'all' ? (
+                  <>
+                    Viewing <span className="text-indigo-600">All Excel Batches</span> ({leads.length} total leads)
+                  </>
+                ) : (
+                  <>
+                    Viewing Batch from <span className="text-indigo-600">{new Date(selectedDateFilter).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span> ({dateScopedLeads.length} leads)
+                  </>
+                )}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                {selectedDateFilter === 'latest'
+                  ? `Showing the latest ${dateScopedLeads.length} leads imported. Older batches remain safely preserved.`
+                  : selectedDateFilter === 'all'
+                  ? `Showing full historical leads across ${uploadBatches.length} Excel upload batches.`
+                  : `Filtered strictly to leads uploaded on this date.`}
+              </p>
+            </div>
           </div>
 
+          <div className="flex items-center gap-2 shrink-0">
+            {selectedDateFilter !== 'all' ? (
+              <button
+                onClick={() => setSelectedDateFilter('all')}
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-indigo-200 text-indigo-700 font-bold text-xs shadow-xs transition-all hover:border-indigo-300"
+              >
+                View All Uploads ({leads.length})
+              </button>
+            ) : latestDateKey ? (
+              <button
+                onClick={() => setSelectedDateFilter('latest')}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-all"
+              >
+                View Latest Upload &rarr;
+              </button>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Filter and Search Hub */}
+      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3.5">
+        {/* Row 1: Global Search & Dropdown Filters */}
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-xl">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search company, skills, exp, email, notes..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-9 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-400 transition-colors"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Dropdown Filters & Quick Reset */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Excel Upload Date / Batch Filter */}
+            {uploadBatches.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700">
+                <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="font-semibold text-slate-500">Upload Date:</span>
+                <select
+                  value={selectedDateFilter}
+                  onChange={(e) => setSelectedDateFilter(e.target.value)}
+                  className="bg-transparent text-slate-900 focus:outline-none cursor-pointer text-xs font-semibold"
+                >
+                  {latestDateKey && (
+                    <option value="latest" className="bg-white text-slate-800 font-semibold">
+                      ⚡ Most Recent ({new Date(latestDateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})
+                    </option>
+                  )}
+                  <option value="all" className="bg-white text-slate-800">
+                    📅 All Dates ({leads.length} leads)
+                  </option>
+                  {uploadBatches.map((b) => (
+                    <option key={b.date} value={b.date} className="bg-white text-slate-800">
+                      {new Date(b.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} ({b.count} leads{b.filenames.size > 0 ? ` • ${Array.from(b.filenames)[0]}` : ''})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Experience Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700">
+              <Briefcase className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="font-semibold text-slate-500">Exp:</span>
+              <select
+                value={expFilter}
+                onChange={(e) => setExpFilter(e.target.value)}
+                className="bg-transparent text-slate-900 focus:outline-none cursor-pointer text-xs font-semibold"
+              >
+                <option value="all" className="bg-white text-slate-800">All Experience</option>
+                <option value="0-1" className="bg-white text-slate-800">0 - 1 Years</option>
+                <option value="1-3" className="bg-white text-slate-800">1 - 3 Years</option>
+                <option value="3-5" className="bg-white text-slate-800">3 - 5 Years</option>
+                <option value="5+" className="bg-white text-slate-800">5+ Years</option>
+              </select>
+            </div>
+
+            {/* Reset Filters button */}
+            {(search || selectedDateFilter !== 'latest' || expFilter !== 'all' || filterType !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setFilterType('all');
+                  setExpFilter('all');
+                  setSelectedDateFilter('latest');
+                }}
+                className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1 transition-colors"
+                title="Reset all search and filters"
+              >
+                <X className="w-3.5 h-3.5" />
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Status Tabs & Telemetry Counters */}
+        <div className="border-t border-slate-100 pt-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Status Tabs */}
-          <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex flex-wrap text-xs font-medium gap-1">
+          <div className="bg-slate-100/90 p-1 rounded-xl border border-slate-200 flex flex-wrap text-xs font-medium gap-1">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'all' ? 'bg-white text-blue-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === 'all' ? 'bg-white text-blue-600 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              All ({leads.length})
+              All ({dynamicCounts.all})
             </button>
             <button
               onClick={() => setFilterType('unsent')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'unsent' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === 'unsent' ? 'bg-white text-indigo-600 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Unsent ({unsentEligibleCount})
+              Unsent ({dynamicCounts.unsent})
+            </button>
+            <button
+              onClick={() => setFilterType('drafted')}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === 'drafted' ? 'bg-white text-violet-600 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Drafts ({dynamicCounts.drafted})
             </button>
             <button
               onClick={() => setFilterType('sent')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'sent' ? 'bg-white text-emerald-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === 'sent' ? 'bg-white text-emerald-600 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Sent ({stats.sentCount})
+              Sent ({dynamicCounts.sent})
             </button>
             <button
               onClick={() => setFilterType('replied')}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                filterType === 'replied' ? 'bg-white text-cyan-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === 'replied' ? 'bg-white text-cyan-600 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Replies ({stats.repliedCount})
+              Replies ({dynamicCounts.replied})
             </button>
+            <button
+              onClick={() => setFilterType('valid')}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === 'valid' ? 'bg-white text-emerald-700 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Valid Email ({dynamicCounts.validEmail})
+            </button>
+          </div>
+
+          {/* Results Summary & Selection Pill */}
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <span className="flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5 text-blue-600" />
+              Showing <strong className="text-slate-900">{filteredLeads.length}</strong> of {dateScopedLeads.length} leads
+            </span>
+            {selectedCount > 0 && (
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 font-bold text-[11px]">
+                {selectedCount} selected
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -634,8 +881,37 @@ export default function LeadsPage() {
                 </tr>
               ) : filteredLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400 italic">
-                    No leads found matching current filters.
+                  <td colSpan={7} className="p-8 text-center text-slate-400">
+                    <p className="font-semibold text-slate-700 mb-1">No leads matching current filters</p>
+                    <p className="text-xs text-slate-400 mb-3">
+                      {search ? `No matches found for "${search}".` : 'Try selecting another status tab or Excel upload batch.'}
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {search && (
+                        <button
+                          onClick={() => setSearch('')}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+                        >
+                          Clear Search
+                        </button>
+                      )}
+                      {selectedDateFilter !== 'all' && (
+                        <button
+                          onClick={() => setSelectedDateFilter('all')}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold"
+                        >
+                          View All Upload Dates ({leads.length})
+                        </button>
+                      )}
+                      {filterType !== 'all' && (
+                        <button
+                          onClick={() => setFilterType('all')}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                        >
+                          Reset Tab Filter
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
