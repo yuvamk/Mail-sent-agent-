@@ -14,6 +14,10 @@ export interface AgentRepo {
   language: string;
   topics: string[];
   updatedAt: string;
+  createdAt?: string;
+  launchAgeText?: string;
+  isFreshLaunch?: boolean;
+  launchRadarReason?: string;
   whatItDoes: string;
   whatItCanDo: string[];
   howToUse: string;
@@ -23,6 +27,32 @@ export interface AgentRepo {
   license?: string;
   isTrending?: boolean;
   isNewest?: boolean;
+}
+
+/**
+ * Compute readable launch age from ISO creation timestamp
+ */
+export function computeLaunchAge(createdAtStr?: string): { ageText: string; isFresh: boolean } {
+  if (!createdAtStr) return { ageText: 'Active Open Source', isFresh: false };
+  const createdMs = new Date(createdAtStr).getTime();
+  if (isNaN(createdMs)) return { ageText: 'Active Open Source', isFresh: false };
+
+  const diffHours = Math.floor((Date.now() - createdMs) / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffHours < 24) {
+    return { ageText: '🚨 Launched Today!', isFresh: true };
+  } else if (diffDays === 1) {
+    return { ageText: '⚡ Launched Yesterday', isFresh: true };
+  } else if (diffDays <= 7) {
+    return { ageText: `🚀 Launched ${diffDays}d ago`, isFresh: true };
+  } else if (diffDays <= 30) {
+    return { ageText: `✨ Launched ${Math.ceil(diffDays / 7)}w ago`, isFresh: true };
+  } else if (diffDays <= 60) {
+    return { ageText: `🔥 Fresh Drop (~${Math.round(diffDays / 30)}mo ago)`, isFresh: true };
+  }
+
+  return { ageText: 'Proven Foundation', isFresh: false };
 }
 
 // In-memory cache to avoid GitHub API rate limits
@@ -370,9 +400,17 @@ function enrichRepoData(item: any): AgentRepo {
     (c) => c.fullName.toLowerCase() === fullName.toLowerCase() || c.name.toLowerCase() === name.toLowerCase()
   );
 
+  const createdAt = item.created_at || item.updated_at || new Date().toISOString();
+  const { ageText, isFresh } = computeLaunchAge(createdAt);
+
   if (curatedMatch) {
+    const effectiveCreated = curatedMatch.createdAt || createdAt;
+    const launchMeta = computeLaunchAge(effectiveCreated);
     return {
       ...curatedMatch,
+      createdAt: effectiveCreated,
+      launchAgeText: launchMeta.ageText,
+      isFreshLaunch: launchMeta.isFresh,
       stars: Math.max(curatedMatch.stars, stars),
       forks: Math.max(curatedMatch.forks, forks),
       updatedAt,
@@ -409,6 +447,9 @@ function enrichRepoData(item: any): AgentRepo {
     language,
     topics,
     updatedAt,
+    createdAt,
+    launchAgeText: ageText,
+    isFreshLaunch: isFresh,
     whatItDoes,
     whatItCanDo,
     howToUse,
@@ -426,11 +467,11 @@ function enrichRepoData(item: any): AgentRepo {
  */
 export async function fetchAgentRepositories(options?: {
   query?: string;
-  sort?: 'trending' | 'newest' | 'stars';
+  sort?: 'launches' | 'trending' | 'newest' | 'stars';
   category?: string;
 }): Promise<AgentRepo[]> {
   const query = options?.query?.trim() || '';
-  const sort = options?.sort || 'trending';
+  const sort = options?.sort || 'launches';
   const category = options?.category || 'All';
   const cacheKey = `${query}_${sort}_${category}`.toLowerCase();
 
@@ -448,14 +489,20 @@ export async function fetchAgentRepositories(options?: {
 
     // Formulate GitHub search query
     let ghQuery = 'topic:ai-agents';
+    let sortParam = 'stars';
+    let orderParam = 'desc';
+
     if (query) {
       ghQuery += ` ${query}`;
     }
 
-    let sortParam = 'stars';
-    let orderParam = 'desc';
-
-    if (sort === 'newest') {
+    if (sort === 'launches') {
+      // Catch freshly launched repositories from the past 45 days
+      const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      ghQuery = query ? `${query} created:>${fortyFiveDaysAgo}` : `topic:ai-agents created:>${fortyFiveDaysAgo}`;
+      sortParam = 'created';
+      orderParam = 'desc';
+    } else if (sort === 'newest') {
       sortParam = 'updated';
       orderParam = 'desc';
       ghQuery += ' stars:>50';
@@ -536,7 +583,13 @@ export async function fetchAgentRepositories(options?: {
   }
 
   // Sort
-  if (sort === 'newest') {
+  if (sort === 'launches') {
+    finalRepos.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  } else if (sort === 'newest') {
     finalRepos.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   } else {
     finalRepos.sort((a, b) => b.stars - a.stars);

@@ -44,11 +44,20 @@ export async function generateLinkedInPost(
   let userMessage = '';
 
   if (isRepoSpotlight && repo) {
+    const isFresh = repo.isFreshLaunch || (repo.launchAgeText && !repo.launchAgeText.includes('Proven'));
+    const freshLaunchDirective = isFresh
+      ? `\n\n🚨 FRESH LAUNCH CONTEXT:
+This open-source AI agent repository was freshly launched on GitHub (${repo.launchAgeText || 'Brand-New Launch'})!
+Frame the hook and opening with high urgency and excitement about this brand-new open-source release:
+- Hook example style: "🚨 NEW LAUNCH ALERT: Someone just open-sourced ${repo.name} on GitHub, and it solves one of the biggest headaches in AI agent development..." or "If you're building with AI agents, stop scrolling—${repo.name} just dropped on GitHub..."
+- Emphasize why developers and builders should check out this freshly launched tool today.`
+      : '';
+
     systemPrompt = `You are an elite AI engineer, open-source evangelist, and top developer voice on LinkedIn.
-Your mission: Write a high-engagement, viral, and actionable LinkedIn post spotlighting an open-source AI agent repository that makes developers' and builders' work easy.
+Your mission: Write a high-engagement, viral, and actionable LinkedIn post spotlighting an open-source AI agent repository that makes developers' and builders' work easy.${freshLaunchDirective}
 
 Follow these strict LinkedIn formatting rules:
-1. HOOK: Start with a 1-2 line powerful, problem-first hook. What painful task or bottleneck does this AI agent eliminate for developers/builders? Never use generic greetings ("Hey everyone", "I'm excited to share", "Check out this repo").
+1. HOOK: Start with a 1-2 line powerful, problem-first hook${isFresh ? ' announcing this new open-source drop' : ''}. What painful task or bottleneck does this AI agent eliminate for developers/builders? Never use generic greetings ("Hey everyone", "I'm excited to share", "Check out this repo").
 2. WHAT IT IS & WHAT IT DOES: In 2 crisp, high-signal sentences, explain what this repository is, why it was created, and what it does.
 3. WHAT IT CAN DO (Superpowers): Use clean bullet points (e.g. 🔹 or ⚡ or 🚀) to highlight 3-4 concrete capabilities or features (e.g., autonomous DOM perception, multi-agent orchestration, infinite memory context, local privacy, auto-refactoring).
 4. HOW TO USE IN YOUR PROJECT: Clearly explain how a developer or builder can start using it in their project today. Include practical guidance (e.g. installation command, quick-start code pattern, or architecture integration).
@@ -64,6 +73,7 @@ Author persona: ${author}.
 Return ONLY the plain text of the post ready to publish directly on LinkedIn. Do NOT include markdown code fences around the whole post, meta reasoning, or scratchpad tags.`;
 
     userMessage = `AI Agent Repository: ${repo.name || options.topic} (${repo.fullName || repo.name || ''})
+Launch Timing: ${repo.launchAgeText || 'Active Open Source'} (Created: ${repo.createdAt || 'Recent'})
 GitHub URL: ${repo.repoUrl || options.sourceUrl}
 Primary Language: ${repo.language || 'Python / TypeScript'}
 Stars: ⭐ ${repo.stars ? repo.stars.toLocaleString() : 'Trending'}

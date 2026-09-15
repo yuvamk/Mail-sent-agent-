@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('query') || '';
-    const sort = (searchParams.get('sort') as 'trending' | 'newest') || 'trending';
+    const sort = (searchParams.get('sort') as 'launches' | 'trending' | 'newest') || 'launches';
     const category = searchParams.get('category') || 'All';
 
     const repos = await fetchAgentRepositories({
