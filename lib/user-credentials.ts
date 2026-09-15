@@ -20,6 +20,11 @@ export interface UserDynamicCredentials {
   linkedinPersonUrn: string;
   isAdmin: boolean;
   allowPlatformKeys: boolean;
+  autoRadarEnabled: boolean;
+  autoRadarMode: 'auto_draft' | 'auto_post';
+  autoRadarMinStars: number;
+  autoRadarLastRun: string | null;
+  autoRadarLastDecision?: any;
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `You are a professional career outreach strategist writing cold job outreach emails to HR representatives or recruiters.
@@ -80,6 +85,11 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
     linkedinPersonUrn: isPlatformAdmin ? (process.env.LINKEDIN_PERSON_URN || '') : '',
     isAdmin: isPlatformAdmin,
     allowPlatformKeys: true,
+    autoRadarEnabled: false,
+    autoRadarMode: 'auto_draft',
+    autoRadarMinStars: 10,
+    autoRadarLastRun: null,
+    autoRadarLastDecision: null,
   };
 
   if (!userId) return envDefaults;
@@ -116,6 +126,11 @@ export async function getUserCredentials(userId?: string | null): Promise<UserDy
       linkedinPersonUrn: dbSettings.linkedin_person_urn?.trim() || envDefaults.linkedinPersonUrn,
       isAdmin: dbSettings.is_admin ?? envDefaults.isAdmin,
       allowPlatformKeys,
+      autoRadarEnabled: Boolean(dbSettings.auto_radar_enabled),
+      autoRadarMode: dbSettings.auto_radar_mode === 'auto_post' ? 'auto_post' : 'auto_draft',
+      autoRadarMinStars: typeof dbSettings.auto_radar_min_stars === 'number' ? dbSettings.auto_radar_min_stars : 10,
+      autoRadarLastRun: dbSettings.auto_radar_last_run || null,
+      autoRadarLastDecision: dbSettings.auto_radar_last_decision || null,
     };
   } catch (e) {
     console.warn('Error fetching dynamic user credentials from DB, fallback to env:', e);

@@ -39,6 +39,8 @@ import {
   Bot,
   Zap,
   BookOpen,
+  Power,
+  BrainCircuit,
 } from 'lucide-react';
 import { AgentRepo } from '@/lib/repo-fetcher';
 
@@ -132,6 +134,15 @@ export default function LinkedInStudioPage() {
   const [tokenInput, setTokenInput] = useState('');
   const [isSavingToken, setIsSavingToken] = useState(false);
 
+  // Autonomous Auto-Pilot Radar
+  const [autoRadarEnabled, setAutoRadarEnabled] = useState(false);
+  const [autoRadarMode, setAutoRadarMode] = useState<'auto_draft' | 'auto_post'>('auto_draft');
+  const [autoRadarLastRun, setAutoRadarLastRun] = useState<string | null>(null);
+  const [autoRadarLastDecision, setAutoRadarLastDecision] = useState<any>(null);
+  const [isTogglingRadar, setIsTogglingRadar] = useState(false);
+  const [isRunningAutoPilot, setIsRunningAutoPilot] = useState(false);
+  const [showDecisionModal, setShowDecisionModal] = useState(false);
+
   // Initial Load: Enforce Authentication & Scoped Fetch
   useEffect(() => {
     async function initSession() {
@@ -151,6 +162,7 @@ export default function LinkedInStudioPage() {
           fetchNews(),
           checkAuth(uid, token),
           loadPastPosts(uid, token),
+          loadAutoRadarSettings(uid, token),
         ]);
       } catch (err) {
         console.error('LinkedIn studio auth check failed:', err);
@@ -161,6 +173,122 @@ export default function LinkedInStudioPage() {
     }
     initSession();
   }, [router]);
+
+  const loadAutoRadarSettings = async (uid: string, token: string) => {
+    try {
+      const res = await fetch(`/api/settings?userId=${uid}`, {
+        headers: { Authorization: `Bearer ${token}`, 'x-user-id': uid },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settings) {
+          setAutoRadarEnabled(Boolean(data.settings.AUTO_RADAR_ENABLED));
+          setAutoRadarMode(data.settings.AUTO_RADAR_MODE === 'auto_post' ? 'auto_post' : 'auto_draft');
+          setAutoRadarLastRun(data.settings.AUTO_RADAR_LAST_RUN || null);
+          setAutoRadarLastDecision(data.settings.AUTO_RADAR_LAST_DECISION || null);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load auto-radar settings:', e);
+    }
+  };
+
+  const handleToggleAutoRadar = async (nextState: boolean) => {
+    setIsTogglingRadar(true);
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'x-user-id': currentUserId || '',
+        },
+        body: JSON.stringify({
+          userId: currentUserId,
+          AUTO_RADAR_ENABLED: nextState,
+          AUTO_RADAR_MODE: autoRadarMode,
+        }),
+      });
+      if (res.ok) {
+        setAutoRadarEnabled(nextState);
+        showStatus(
+          'success',
+          nextState
+            ? `🤖 Autonomous Auto-Pilot is now ACTIVE (${autoRadarMode === 'auto_post' ? 'Auto-Post' : 'Auto-Draft'} mode).`
+            : '⏸️ Autonomous Auto-Pilot is now PAUSED.'
+        );
+      } else {
+        showStatus('error', 'Failed to update auto-pilot setting.');
+      }
+    } catch {
+      showStatus('error', 'Network error updating auto-pilot setting.');
+    } finally {
+      setIsTogglingRadar(false);
+    }
+  };
+
+  const handleChangeAutoRadarMode = async (mode: 'auto_draft' | 'auto_post') => {
+    setAutoRadarMode(mode);
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'x-user-id': currentUserId || '',
+        },
+        body: JSON.stringify({
+          userId: currentUserId,
+          AUTO_RADAR_MODE: mode,
+        }),
+      });
+      showStatus('info', `Switched Auto-Pilot to ${mode === 'auto_post' ? '⚡ Full Auto-Post' : '📝 Auto-Draft & Review'} mode.`);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRunAutoPilotNow = async () => {
+    setIsRunningAutoPilot(true);
+    try {
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch('/api/cron/radar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'x-user-id': currentUserId || '',
+        },
+        body: JSON.stringify({
+          userId: currentUserId,
+          force: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.executed) {
+        setAutoRadarLastDecision(data.decision);
+        setAutoRadarLastRun(new Date().toISOString());
+        showStatus(
+          'success',
+          `🎯 Auto-Pilot evaluated ${data.decision?.candidateCount || 'fresh'} repos and picked "${data.decision?.selectedRepo?.name}"!`
+        );
+        setShowDecisionModal(true);
+        if (session) {
+          loadPastPosts(session.user.id, session.access_token);
+        }
+      } else if (data.success && !data.executed) {
+        showStatus('info', data.reason || 'Auto-pilot scan finished. No new repos to process.');
+      } else {
+        showStatus('error', data.error || 'Auto-pilot execution failed.');
+      }
+    } catch (err: any) {
+      showStatus('error', err.message || 'Error executing auto-pilot cycle');
+    } finally {
+      setIsRunningAutoPilot(false);
+    }
+  };
 
   const showStatus = (type: 'success' | 'error' | 'info', text: string) => {
     setStatusMessage({ type, text });
@@ -671,6 +799,211 @@ export default function LinkedInStudioPage() {
           <button onClick={() => setStatusMessage(null)} className="text-xs text-slate-400 hover:text-slate-700">
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Autonomous Launch Radar Auto-Pilot Control Bar */}
+      <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 border border-blue-200/90 rounded-3xl p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="p-2 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                <Bot className="w-5 h-5" />
+              </div>
+              <h2 className="text-base font-black text-slate-900 flex items-center gap-2.5">
+                Autonomous Launch Radar & Auto-Poster
+                <span
+                  className={`text-[11px] font-bold px-3 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                    autoRadarEnabled
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-xs'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${autoRadarEnabled ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
+                  {autoRadarEnabled ? 'Auto-Pilot Active' : 'Auto-Pilot Paused'}
+                </span>
+              </h2>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              When turned ON, your agent monitors GitHub in the background for newly dropped AI agent repos, runs an LLM evaluation to select the #1 most useful tool for developers, and prepares high-engagement breakdown posts.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Mode Selector */}
+            <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => handleChangeAutoRadarMode('auto_draft')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  autoRadarMode === 'auto_draft'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Agent selects the best repo and prepares draft ready for 1-click review"
+              >
+                📝 Auto-Draft & Review
+              </button>
+              <button
+                type="button"
+                onClick={() => handleChangeAutoRadarMode('auto_post')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  autoRadarMode === 'auto_post'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Agent automatically publishes directly to your personal LinkedIn account"
+              >
+                ⚡ Full Auto-Post
+              </button>
+            </div>
+
+            {/* ON / OFF Toggle Button */}
+            <button
+              type="button"
+              onClick={() => handleToggleAutoRadar(!autoRadarEnabled)}
+              disabled={isTogglingRadar}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 border cursor-pointer ${
+                autoRadarEnabled
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+              }`}
+            >
+              <Power className="w-3.5 h-3.5" />
+              {autoRadarEnabled ? 'Auto-Pilot ON' : 'Turn Auto-Pilot ON'}
+            </button>
+
+            {/* Run Now Trigger Button */}
+            <button
+              type="button"
+              onClick={handleRunAutoPilotNow}
+              disabled={isRunningAutoPilot}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              title="Trigger an autonomous scan and decision cycle right now without waiting for scheduled cron"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${isRunningAutoPilot ? 'animate-spin text-cyan-400' : 'text-amber-400'}`} />
+              {isRunningAutoPilot ? 'Agent Evaluating...' : '⚡ Run Auto-Pilot Now'}
+            </button>
+
+            {/* Decision Log Button */}
+            {autoRadarLastDecision && (
+              <button
+                type="button"
+                onClick={() => setShowDecisionModal(true)}
+                className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                title="View why the AI selected the last repo"
+              >
+                <BrainCircuit className="w-3.5 h-3.5 text-blue-600" />
+                Decision Log
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Status Sub-bar */}
+        {autoRadarLastDecision && (
+          <div className="mt-4 pt-3 border-t border-blue-200/70 flex items-center justify-between text-xs text-slate-500 flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-700">🎯 Last Autonomous Selection:</span>
+              <a
+                href={autoRadarLastDecision.repoUrl || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-blue-600 font-bold hover:underline"
+              >
+                {autoRadarLastDecision.fullName || autoRadarLastDecision.repoName}
+              </a>
+              <span className="text-[11px] text-slate-500">
+                (Utility Score: {autoRadarLastDecision.utilityScore || 95}/100 •{' '}
+                {autoRadarLastDecision.status === 'posted' ? '✅ Published to LinkedIn' : '📝 Saved as Draft'})
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-500">
+              Last executed:{' '}
+              {new Date(autoRadarLastDecision.timestamp || autoRadarLastRun || Date.now()).toLocaleDateString([], {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Decision Transparency Modal */}
+      {showDecisionModal && autoRadarLastDecision && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-100 text-blue-700">
+                  <BrainCircuit className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">AI Decision Transparency Log</h3>
+                  <p className="text-xs text-slate-500">Why your autonomous agent picked this repository</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDecisionModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Selected Repository</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900">
+                    Score: {autoRadarLastDecision.utilityScore || 95}/100
+                  </span>
+                </div>
+                <div className="font-mono font-bold text-slate-900 text-sm">
+                  {autoRadarLastDecision.fullName || autoRadarLastDecision.repoName}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Evaluation Reasoning</label>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-700 leading-relaxed">
+                  {autoRadarLastDecision.reasoning}
+                </div>
+              </div>
+
+              {autoRadarLastDecision.superpowerHighlight && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Superpower Highlight</label>
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100 text-xs text-indigo-900 leading-relaxed font-medium">
+                    ⚡ {autoRadarLastDecision.superpowerHighlight}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              {autoRadarLastDecision.repoUrl && (
+                <a
+                  href={autoRadarLastDecision.repoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View GitHub Repo
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowDecisionModal(false)}
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+              >
+                Close Log
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

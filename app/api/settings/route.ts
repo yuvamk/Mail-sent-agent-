@@ -28,6 +28,11 @@ export async function GET(req: NextRequest) {
           LINKEDIN_PERSON_URN: '',
           IS_ADMIN: false,
           DEFAULT_PROMPT_TEMPLATE: DEFAULT_SYSTEM_PROMPT,
+          AUTO_RADAR_ENABLED: false,
+          AUTO_RADAR_MODE: 'auto_draft',
+          AUTO_RADAR_MIN_STARS: 10,
+          AUTO_RADAR_LAST_RUN: null,
+          AUTO_RADAR_LAST_DECISION: null,
         },
       });
     }
@@ -54,6 +59,11 @@ export async function GET(req: NextRequest) {
         LINKEDIN_PERSON_URN: creds.linkedinPersonUrn,
         IS_ADMIN: creds.isAdmin,
         DEFAULT_PROMPT_TEMPLATE: DEFAULT_SYSTEM_PROMPT,
+        AUTO_RADAR_ENABLED: creds.autoRadarEnabled,
+        AUTO_RADAR_MODE: creds.autoRadarMode,
+        AUTO_RADAR_MIN_STARS: creds.autoRadarMinStars,
+        AUTO_RADAR_LAST_RUN: creds.autoRadarLastRun,
+        AUTO_RADAR_LAST_DECISION: creds.autoRadarLastDecision,
       },
     });
   } catch (error: any) {
@@ -94,8 +104,14 @@ export async function POST(req: NextRequest) {
       linkedin_url: fields.MY_LINKEDIN ?? null,
       linkedin_access_token: fields.LINKEDIN_ACCESS_TOKEN ?? null,
       linkedin_person_urn: fields.LINKEDIN_PERSON_URN ?? null,
+      auto_radar_enabled: fields.AUTO_RADAR_ENABLED !== undefined ? Boolean(fields.AUTO_RADAR_ENABLED) : undefined,
+      auto_radar_mode: fields.AUTO_RADAR_MODE === 'auto_post' ? 'auto_post' : (fields.AUTO_RADAR_MODE ? 'auto_draft' : undefined),
+      auto_radar_min_stars: typeof fields.AUTO_RADAR_MIN_STARS === 'number' ? fields.AUTO_RADAR_MIN_STARS : undefined,
       updated_at: new Date().toISOString(),
     };
+
+    // Remove undefined keys so they don't overwrite with null unless specified
+    Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
 
     const { error } = await supabase
       .from('user_settings')
