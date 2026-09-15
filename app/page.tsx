@@ -47,6 +47,8 @@ import {
   Activity,
   Award,
   BookOpen,
+  Power,
+  BrainCircuit,
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -54,15 +56,18 @@ export default function LandingPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   // Active Hero Tab Preview
-  const [activeHeroTab, setActiveHeroTab] = useState<'platform' | 'linkedin' | 'outreach'>('platform');
+  const [activeHeroTab, setActiveHeroTab] = useState<'radar' | 'platform' | 'linkedin' | 'outreach'>('radar');
 
   // Interactive Simulator State
-  const [simActiveTab, setSimActiveTab] = useState<'leads' | 'draft' | 'linkedin' | 'delivery' | 'pricing'>('draft');
+  const [simActiveTab, setSimActiveTab] = useState<'radar' | 'draft' | 'leads' | 'linkedin' | 'delivery' | 'pricing'>('radar');
   const [simModel, setSimModel] = useState<'gemini' | 'groq' | 'claude'>('gemini');
   const [simTone, setSimTone] = useState<'ultra-short' | 'warm' | 'formal'>('warm');
   const [simEmailCount, setSimEmailCount] = useState<number>(350);
   const [simPublished, setSimPublished] = useState(false);
   const [simLinkedinTone, setSimLinkedinTone] = useState<'thought-leader' | 'technical'>('thought-leader');
+  const [simRadarRepo, setSimRadarRepo] = useState<'anything2explainer' | 'agent-memory' | 'reef'>('anything2explainer');
+  const [simAutoPilotMode, setSimAutoPilotMode] = useState<'auto_draft' | 'auto_post'>('auto_draft');
+  const [simAutoPilotEnabled, setSimAutoPilotEnabled] = useState(true);
 
   // FAQ Accordion State
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -135,6 +140,14 @@ export default function LandingPage() {
     {
       q: 'How does the Google Gemini 3-Key Auto-Rotation Pool work?',
       a: 'When sending volume outreach or generating research posts, free or low-tier API keys often encounter 429 rate limits or 503 high-demand spikes. ReachOut AI automatically maintains a pool of 3 keys, instantly rotating to the next available key upon error, and seamlessly falling back to Groq Cloud (Llama 3.3 70B) if the pool is exhausted.',
+    },
+    {
+      q: 'How does the Autonomous AI Agent Launch Radar detect new open-source repos on GitHub?',
+      a: 'The radar continuously scans GitHub’s public Search API for newly created repositories matching topics like "ai-agents", "autonomous-agents", and "llm-agent" sorted by creation time. An LLM Principal Tech Evaluator (Gemini 2.0 Flash) analyzes candidate repos, scores their builder utility, and selects the #1 standout tool while permanently recording processed URLs to prevent duplicates.',
+    },
+    {
+      q: 'Can I disable auto-posting to LinkedIn so I can review drafts first?',
+      a: 'Yes! You have 100% control. The Auto-Pilot feature is turned OFF by default until you toggle it ON. Furthermore, you can choose between "Auto-Draft & Review" (where the agent prepares the breakdown and saves it to your Drafts for 1-click approval) or "Full Auto-Post" (where it publishes directly to your personal LinkedIn account via the official REST API).',
     },
     {
       q: 'How does the platform protect against email spam filters and domain blocks?',
@@ -309,10 +322,24 @@ export default function LandingPage() {
         {/* ========================================================================= */}
         <div className="pt-6 max-w-5xl mx-auto space-y-4">
           {/* Segmented Control to switch preview */}
-          <div className="inline-flex p-1.5 rounded-2xl bg-slate-100/90 border border-slate-200/90 shadow-inner">
+          <div className="inline-flex p-1.5 rounded-2xl bg-slate-100/90 border border-slate-200/90 shadow-inner flex-wrap justify-center gap-1">
+            <button
+              onClick={() => setActiveHeroTab('radar')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                activeHeroTab === 'radar'
+                  ? 'bg-white text-blue-700 shadow-md border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5 text-blue-600" />
+              <span className="flex items-center gap-1.5">
+                AI Agent Launch Radar
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              </span>
+            </button>
             <button
               onClick={() => setActiveHeroTab('platform')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                 activeHeroTab === 'platform'
                   ? 'bg-white text-indigo-700 shadow-md border border-slate-200/60'
                   : 'text-slate-600 hover:text-slate-900'
@@ -323,18 +350,18 @@ export default function LandingPage() {
             </button>
             <button
               onClick={() => setActiveHeroTab('linkedin')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                 activeHeroTab === 'linkedin'
                   ? 'bg-white text-indigo-700 shadow-md border border-slate-200/60'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Linkedin className="w-3.5 h-3.5 text-blue-600" />
-              LinkedIn Thought Leadership Studio
+              LinkedIn Thought Leadership
             </button>
             <button
               onClick={() => setActiveHeroTab('outreach')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                 activeHeroTab === 'outreach'
                   ? 'bg-white text-indigo-700 shadow-md border border-slate-200/60'
                   : 'text-slate-600 hover:text-slate-900'
@@ -347,7 +374,126 @@ export default function LandingPage() {
 
           {/* Visual Showcase Screen Frame */}
           <div className="relative rounded-3xl p-2 sm:p-3 bg-white border border-slate-200/90 shadow-2xl shadow-indigo-500/5 group">
-            <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 text-left">
+              {activeHeroTab === 'radar' && (
+                <div className="p-6 sm:p-8 space-y-6 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/80 text-white min-h-[480px]">
+                  {/* Top Radar Bar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/20">
+                        <Bot className="w-5 h-5 animate-pulse" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-white">Live GitHub Launch Radar</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            SCANNING GITHUB LIVE
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400">Autonomous detection & AI LinkedIn auto-poster</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="px-3 py-1 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-300 flex items-center gap-2">
+                        <span className="text-slate-400 font-mono text-[11px]">Auto-Pilot:</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          ON (Auto-Draft)
+                        </span>
+                      </div>
+                      <div className="px-3 py-1 rounded-xl bg-blue-600/20 border border-blue-500/30 text-xs text-blue-300 font-mono">
+                        0 Repos Repeated
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3 Live Caught Repos */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                    <div className="p-4 rounded-2xl bg-slate-800/80 border-2 border-blue-500 shadow-lg shadow-blue-500/10 space-y-2 relative">
+                      <span className="absolute -top-2.5 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
+                        #1 EVALUATOR PICK (95/100)
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-white">anything2explainer</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          🚀 Launched 7d ago
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 line-clamp-2">
+                        Turns codebases & architectures into interactive video mental models with code AST parsing.
+                      </p>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 font-mono">
+                        <span>⭐ 1,412 stars</span>
+                        <span className="text-cyan-400 font-bold">Coding & Dev Tools</span>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-slate-200">agent-memory</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          ✨ Launched 2w ago
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">
+                        Autonomous persistent memory & associative graph engine for LLM agents.
+                      </p>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 font-mono">
+                        <span>⭐ 1,457 stars</span>
+                        <span className="text-slate-400">Memory & Context</span>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-slate-200">reef</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 border border-slate-600">
+                          ✨ Launched 3w ago
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">
+                        Multi-agent social simulation environment with human-agent consensus protocol.
+                      </p>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 font-mono">
+                        <span>⭐ 1,966 stars</span>
+                        <span className="text-slate-400">Multi-Agent</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI Generated Post Snapshot */}
+                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="w-4 h-4 text-blue-400" />
+                        <span className="font-bold text-slate-200">AI Generated Breakdown (Ready to Auto-Publish)</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        Hook Score: 98%
+                      </span>
+                    </div>
+                    <div className="font-sans text-xs text-slate-300 space-y-1.5 leading-relaxed">
+                      <p className="font-semibold text-white">
+                        🚨 NEW LAUNCH ALERT: If you've ever spent days untangling a legacy codebase just to understand data flow, stop scrolling.
+                      </p>
+                      <p className="text-slate-400 text-[11px]">
+                        <span className="text-cyan-400 font-mono">anything2explainer</span> just dropped on GitHub and passed 1,400 stars for solving architectural understanding.
+                      </p>
+                      <div className="space-y-1 text-[11px] text-slate-300 font-mono">
+                        <div>⚡ Automated AST Architectural Mapping</div>
+                        <div>⚡ Live Diagramming without manual docs</div>
+                        <div>⚡ 2-line quickstart: <code className="text-emerald-400 bg-slate-900 px-1 py-0.5 rounded">npm i anything2explainer</code></div>
+                      </div>
+                      <div className="text-[11px] text-blue-400 pt-1">
+                        ⭐ GitHub: https://github.com/Vincentwei1021/anything2explainer
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {activeHeroTab === 'platform' && (
                 <img
                   src="/images/hero-preview.jpg"
@@ -419,11 +565,12 @@ export default function LandingPage() {
           {/* Simulator Navigation Tabs */}
           <div className="flex flex-wrap items-center border-b border-slate-200 bg-slate-50/80 p-2 gap-1.5">
             {[
-              { id: 'draft', label: '1. AI Email Synthesizer', icon: MailCheck },
-              { id: 'leads', label: '2. Dynamic Lead Mapper', icon: FileSpreadsheet },
-              { id: 'linkedin', label: '3. LinkedIn Studio Simulator', icon: Linkedin },
-              { id: 'delivery', label: '4. Delivery & IMAP Radar', icon: Activity },
-              { id: 'pricing', label: '5. INR Cost Calculator', icon: Coins },
+              { id: 'radar', label: '1. Autonomous Agent Radar', icon: Bot },
+              { id: 'draft', label: '2. AI Email Synthesizer', icon: MailCheck },
+              { id: 'leads', label: '3. Dynamic Lead Mapper', icon: FileSpreadsheet },
+              { id: 'linkedin', label: '4. LinkedIn Studio Simulator', icon: Linkedin },
+              { id: 'delivery', label: '5. Delivery & IMAP Radar', icon: Activity },
+              { id: 'pricing', label: '6. INR Cost Calculator', icon: Coins },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = simActiveTab === tab.id;
@@ -431,9 +578,9 @@ export default function LandingPage() {
                 <button
                   key={tab.id}
                   onClick={() => setSimActiveTab(tab.id as any)}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80'
+                      ? 'bg-white text-blue-700 shadow-sm border border-slate-200/80'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
@@ -446,6 +593,161 @@ export default function LandingPage() {
 
           {/* Simulator Content Area */}
           <div className="p-6 sm:p-8 bg-slate-50/40">
+            {/* 0. RADAR SIMULATOR */}
+            {simActiveTab === 'radar' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                        <Bot className="w-3.5 h-3.5 text-blue-600" />
+                        Candidate AI Agent Repos
+                      </h4>
+                      <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        LIVE GITHUB
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {[
+                        { id: 'anything2explainer', name: 'anything2explainer', age: '7d ago', stars: '1.4k ⭐', cat: 'Coding & Dev Tools' },
+                        { id: 'agent-memory', name: 'agent-memory', age: '2w ago', stars: '1.4k ⭐', cat: 'Memory & Context' },
+                        { id: 'reef', name: 'reef', age: '3w ago', stars: '1.9k ⭐', cat: 'Multi-Agent' },
+                      ].map((repo) => (
+                        <button
+                          key={repo.id}
+                          onClick={() => setSimRadarRepo(repo.id as any)}
+                          className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            simRadarRepo === repo.id
+                              ? 'bg-blue-50/80 border-blue-300 text-slate-900 shadow-xs'
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold font-mono">{repo.name}</span>
+                            <span className="text-[10px] font-bold text-blue-600">{repo.stars}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
+                            <span>{repo.cat}</span>
+                            <span className="text-amber-600 font-bold">{repo.age}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                      <Power className="w-3.5 h-3.5 text-indigo-600" />
+                      Auto-Pilot Controls (User Power)
+                    </h4>
+                    <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Autonomous Auto-Pilot</div>
+                        <div className="text-[10px] text-slate-500">Scan & draft automatically</div>
+                      </div>
+                      <button
+                        onClick={() => setSimAutoPilotEnabled(!simAutoPilotEnabled)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          simAutoPilotEnabled ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        {simAutoPilotEnabled ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        onClick={() => setSimAutoPilotMode('auto_draft')}
+                        className={`p-2 rounded-xl text-[11px] font-bold text-center border transition-all cursor-pointer ${
+                          simAutoPilotMode === 'auto_draft'
+                            ? 'bg-blue-50 border-blue-300 text-blue-700'
+                            : 'bg-white border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        📝 Auto-Draft
+                      </button>
+                      <button
+                        onClick={() => setSimAutoPilotMode('auto_post')}
+                        className={`p-2 rounded-xl text-[11px] font-bold text-center border transition-all cursor-pointer ${
+                          simAutoPilotMode === 'auto_post'
+                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                            : 'bg-white border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        ⚡ Full Auto-Post
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-200/80 space-y-1.5">
+                    <div className="text-[11px] font-bold text-blue-800 uppercase flex items-center gap-1.5">
+                      <BrainCircuit className="w-3.5 h-3.5" /> LLM Evaluator Verdict
+                    </div>
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      {simRadarRepo === 'anything2explainer'
+                        ? 'Scored 95/100. Selected for transforming codebase comprehension without manual diagrams.'
+                        : simRadarRepo === 'agent-memory'
+                        ? 'Scored 92/100. Selected for solving AI agent amnesia with persistent associative graphs.'
+                        : 'Scored 89/100. Selected for human-agent consensus protocol in simulated societies.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Post Breakdown Preview */}
+                <div className="lg:col-span-8 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 space-y-4 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                        in
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">AI Launch Radar Generated Post</div>
+                        <div className="text-[10px] text-slate-500">Ready to publish on your personal feed</div>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200 font-mono">
+                      {simAutoPilotMode === 'auto_post' ? '⚡ AUTO-POST READY' : '📝 DRAFT FOR REVIEW'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-2.5 font-sans leading-relaxed">
+                    <p className="font-bold text-slate-900 text-sm">
+                      🚨 NEW LAUNCH ALERT: If you've ever spent days untangling a legacy codebase just to understand data flow, stop scrolling.
+                    </p>
+                    <p>
+                      Someone just open-sourced <code className="text-blue-600 font-bold font-mono">Vincentwei1021/{simRadarRepo}</code> on GitHub, and it’s already exploding in popularity for tackling the worst bottleneck in software engineering.
+                    </p>
+                    <div className="space-y-1 pl-1 text-slate-700 font-medium">
+                      <div>⚡ <strong>Automated AST Mapping:</strong> Traverses dependency trees to expose hidden module coupling.</div>
+                      <div>⚡ <strong>Live Dynamic Diagramming:</strong> Renders visual explanations that stay strictly in sync with code.</div>
+                      <div>⚡ <strong>Day-1 Onboarding:</strong> Contextual guided tours taking new engineers from clone to first PR.</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-900 text-slate-200 font-mono text-[11px] space-y-1">
+                      <div className="text-slate-400"># Quick Install & Run:</div>
+                      <div className="text-emerald-400">npm install -g {simRadarRepo}</div>
+                      <div className="text-emerald-400">npx {simRadarRepo} --repo ./my-project</div>
+                    </div>
+                    <div className="text-blue-600 font-bold">
+                      ⭐ GitHub Repository: https://github.com/Vincentwei1021/{simRadarRepo}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-[11px] text-slate-500">
+                      Model: <strong className="text-slate-700">Gemini 2.0 Flash (Key Pool)</strong> • Cost: <strong className="text-emerald-600 font-mono">₹0.008</strong>
+                    </span>
+                    <Link
+                      href={isLoggedIn ? '/linkedin' : '/signup'}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                    >
+                      Open in LinkedIn Studio <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 1. DRAFT SIMULATOR */}
             {simActiveTab === 'draft' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -785,6 +1087,58 @@ export default function LandingPage() {
           <p className="text-sm text-slate-600 leading-relaxed">
             When recruiters receive a cold email, their first instinct is to look up your LinkedIn. ReachOut AI synchronizes your direct outreach pitches with active authority on your profile.
           </p>
+        </div>
+
+        {/* Engine 0 Showcase: Autonomous AI Agent Launch Radar & Auto-Poster */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center p-8 rounded-3xl bg-gradient-to-br from-blue-50/70 via-indigo-50/40 to-white border border-blue-200/80 shadow-lg shadow-blue-500/5">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-blue-100/80 text-blue-800 text-xs font-bold border border-blue-300">
+              <Bot className="w-3.5 h-3.5 text-blue-600 animate-pulse" /> Core Pillar: Autonomous AI Agent Launch Radar
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-950 leading-tight">
+              Catch Fresh GitHub Launches & Auto-Publish Viral Breakdowns
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Whenever a developer or AI lab open-sources a new agentic repository, your agent detects it immediately on GitHub, evaluates its practical utility with Gemini Flash, and formats a breaking launch breakdown for your personal LinkedIn.
+            </p>
+            <ul className="space-y-2.5 text-xs text-slate-700 font-medium">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <strong>Live GitHub Discovery:</strong> Automatically scans for repositories launched in the last 24h to 45 days.
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <strong>LLM Principal Tech Evaluator:</strong> Gemini scores candidate utility (1-100) and selects the #1 standout tool.
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <strong>100% In Your Control:</strong> Toggle Auto-Pilot ON or OFF anytime, and select between Auto-Draft or Full Auto-Post.
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <strong>Duplicate Shield:</strong> Permanent database tracking ensures no repository is ever drafted or posted twice.
+              </li>
+            </ul>
+          </div>
+          <div className="rounded-2xl p-4 bg-slate-900 border border-slate-800 text-white space-y-3 shadow-xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="font-mono text-emerald-400 font-bold">RADAR LOG: SUCCESS</span>
+              </div>
+              <span className="text-slate-400 font-mono text-[10px]">CRON WORKER ACTIVE</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 font-mono text-xs">
+              <div className="text-cyan-400 font-bold">🎯 Winner: Vincentwei1021/anything2explainer</div>
+              <div className="text-slate-300 text-[11px]">Score: 95/100 • Coding & Dev Tools</div>
+              <div className="text-slate-400 text-[11px]">Reason: Solves architectural mental models with code AST parsing.</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 font-sans space-y-1">
+              <span className="font-bold text-white block">🚨 NEW LAUNCH ALERT: anything2explainer</span>
+              <p className="text-slate-400 line-clamp-2">Transforming complex codebases into interactive video walk-throughs...</p>
+              <span className="text-blue-400 block font-mono">⭐ https://github.com/Vincentwei1021/anything2explainer</span>
+            </div>
+          </div>
         </div>
 
         {/* Engine 1 Showcase */}

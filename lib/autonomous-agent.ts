@@ -105,7 +105,7 @@ Analyze each candidate and decide which single repository provides the highest p
     const geminiRes = await executeWithGeminiRotation(async (apiKey) => {
       const ai = new GoogleGenerativeAI(apiKey);
       const model = ai.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-flash-latest',
         generationConfig: {
           temperature: 0.2,
           responseMimeType: 'application/json',
@@ -129,7 +129,7 @@ Analyze each candidate and decide which single repository provides the highest p
             { role: 'system', content: systemInstruction },
             { role: 'user', content: userPrompt },
           ],
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama-3.1-8b-instant',
           temperature: 0.2,
           response_format: { type: 'json_object' },
         });
