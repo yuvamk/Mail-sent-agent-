@@ -5,6 +5,8 @@ import { getAvailableGroqKeys } from '@/lib/ai';
 import { UserDynamicCredentials } from '@/lib/user-credentials';
 import { executeWithGeminiRotation } from '@/lib/gemini-keys';
 
+import { AgentRepo } from '@/lib/repo-fetcher';
+
 export interface LinkedInPostOutput {
   topic: string;
   postContent: string;
@@ -21,6 +23,8 @@ export interface PostGenerationOptions {
   tone?: 'thought-leader' | 'technical' | 'conversational' | 'breaking-news';
   authorName?: string;
   aiProvider?: 'gemini' | 'groq' | 'claude';
+  postType?: 'news' | 'repo_spotlight';
+  repoData?: Partial<AgentRepo>;
 }
 
 export async function generateLinkedInPost(
@@ -33,7 +37,45 @@ export async function generateLinkedInPost(
   const tone = options.tone || 'thought-leader';
   const author = creds.candidateName || options.authorName || 'AI & Tech Researcher';
 
-  const systemPrompt = `You are a world-class AI researcher, tech strategist, and top LinkedIn voice.
+  const isRepoSpotlight = options.postType === 'repo_spotlight' || Boolean(options.repoData);
+  const repo = options.repoData;
+
+  let systemPrompt = '';
+  let userMessage = '';
+
+  if (isRepoSpotlight && repo) {
+    systemPrompt = `You are an elite AI engineer, open-source evangelist, and top developer voice on LinkedIn.
+Your mission: Write a high-engagement, viral, and actionable LinkedIn post spotlighting an open-source AI agent repository that makes developers' and builders' work easy.
+
+Follow these strict LinkedIn formatting rules:
+1. HOOK: Start with a 1-2 line powerful, problem-first hook. What painful task or bottleneck does this AI agent eliminate for developers/builders? Never use generic greetings ("Hey everyone", "I'm excited to share", "Check out this repo").
+2. WHAT IT IS & WHAT IT DOES: In 2 crisp, high-signal sentences, explain what this repository is, why it was created, and what it does.
+3. WHAT IT CAN DO (Superpowers): Use clean bullet points (e.g. 🔹 or ⚡ or 🚀) to highlight 3-4 concrete capabilities or features (e.g., autonomous DOM perception, multi-agent orchestration, infinite memory context, local privacy, auto-refactoring).
+4. HOW TO USE IN YOUR PROJECT: Clearly explain how a developer or builder can start using it in their project today. Include practical guidance (e.g. installation command, quick-start code pattern, or architecture integration).
+5. DIRECT REPO LINK: Include a clean, prominent callout with the exact repository link:
+   ⭐ GitHub Repository: ${repo.repoUrl || options.sourceUrl || 'https://github.com'}
+6. ENGAGEMENT QUESTION: End with a sharp, open question for fellow engineers and builders to discuss in the comments (e.g. asking how they are automating workflows or what they'd build with this).
+7. HASHTAGS: Provide 4-5 high-relevance hashtags (e.g., #AIAgents #OpenSource #DeveloperTools #SoftwareEngineering #AI).
+8. SPACING: Ensure generous empty lines between every 1-2 short sentences for mobile readability.
+
+Tone style: ${tone} (developer-first, high technical signal, practical, zero corporate fluff).
+Author persona: ${author}.
+
+Return ONLY the plain text of the post ready to publish directly on LinkedIn. Do NOT include markdown code fences around the whole post, meta reasoning, or scratchpad tags.`;
+
+    userMessage = `AI Agent Repository: ${repo.name || options.topic} (${repo.fullName || repo.name || ''})
+GitHub URL: ${repo.repoUrl || options.sourceUrl}
+Primary Language: ${repo.language || 'Python / TypeScript'}
+Stars: ⭐ ${repo.stars ? repo.stars.toLocaleString() : 'Trending'}
+Category: ${repo.category || 'AI Agents & Automation'}
+What It Does: ${repo.whatItDoes || repo.description || options.summary || ''}
+Key Capabilities: ${Array.isArray(repo.whatItCanDo) ? repo.whatItCanDo.join('; ') : ''}
+How To Use: ${repo.howToUse || ''}
+Best For: ${repo.bestFor || 'Developers & AI Builders'}
+
+Write the ultimate viral LinkedIn spotlight post explaining this repository, what it is about, what it can do, how developers can use it in their project, and linking directly to the repo.`;
+  } else {
+    systemPrompt = `You are a world-class AI researcher, tech strategist, and top LinkedIn voice.
 Your goal is to write a high-impact, authentic, and viral LinkedIn post analyzing a cutting-edge AI or technology development.
 
 Follow these strict LinkedIn formatting rules:
@@ -50,12 +92,13 @@ Author persona: ${author}.
 
 Return ONLY the plain text of the post ready to publish on LinkedIn. Do NOT include any meta reasoning, scratchpad, or markdown backticks.`;
 
-  const userMessage = `Topic: ${options.topic}
+    userMessage = `Topic: ${options.topic}
 Context & Summary: ${options.summary || options.topic}
 Source Publication: ${options.sourceName || 'Tech News'}
 Source Link: ${options.sourceUrl || 'N/A'}
 
 Write the ultimate LinkedIn post on this topic.`;
+  }
 
   // 1. Google Gemini (gemini-flash-latest with multi-key rotation)
   const tryGemini = async (): Promise<LinkedInPostOutput | null> => {

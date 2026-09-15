@@ -32,7 +32,15 @@ import {
   Code2,
   Building2,
   Layers,
+  FolderGit2,
+  Star,
+  GitFork,
+  Terminal,
+  Bot,
+  Zap,
+  BookOpen,
 } from 'lucide-react';
+import { AgentRepo } from '@/lib/repo-fetcher';
 
 interface Article {
   id: string;
@@ -63,6 +71,17 @@ interface LinkedInPost {
 }
 
 export default function LinkedInStudioPage() {
+  // Source Mode: 'repos' (Cool AI Agent Repos) or 'news' (Live Tech & AI News Radar)
+  const [sourceMode, setSourceMode] = useState<'repos' | 'news'>('repos');
+
+  // AI Agent Repos Discovery State
+  const [repos, setRepos] = useState<AgentRepo[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState<AgentRepo | null>(null);
+  const [activeRepoCategory, setActiveRepoCategory] = useState<string>('All');
+  const [repoSearchQuery, setRepoSearchQuery] = useState('');
+  const [repoSort, setRepoSort] = useState<'trending' | 'newest'>('trending');
+  const [isFetchingRepos, setIsFetchingRepos] = useState(false);
+
   // News Explorer State
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -128,6 +147,7 @@ export default function LinkedInStudioPage() {
         setCurrentUserId(uid);
 
         await Promise.all([
+          fetchRepos(),
           fetchNews(),
           checkAuth(uid, token),
           loadPastPosts(uid, token),
@@ -145,6 +165,31 @@ export default function LinkedInStudioPage() {
   const showStatus = (type: 'success' | 'error' | 'info', text: string) => {
     setStatusMessage({ type, text });
     setTimeout(() => setStatusMessage(null), 6000);
+  };
+
+  const fetchRepos = async (query = '', sort = repoSort, category = activeRepoCategory) => {
+    setIsFetchingRepos(true);
+    try {
+      const params = new URLSearchParams();
+      if (query) params.set('query', query);
+      if (sort) params.set('sort', sort);
+      if (category && category !== 'All') params.set('category', category);
+
+      const res = await fetch(`/api/linkedin/repos?${params.toString()}`);
+      const data = await res.json();
+      if (data.success && data.repos) {
+        setRepos(data.repos);
+        if (data.repos.length > 0) {
+          if (!selectedRepo || !data.repos.some((r: AgentRepo) => r.id === selectedRepo.id)) {
+            setSelectedRepo(data.repos[0]);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch AI agent repos:', err);
+    } finally {
+      setIsFetchingRepos(false);
+    }
   };
 
   const fetchNews = async () => {
@@ -211,28 +256,84 @@ export default function LinkedInStudioPage() {
     });
   }, [articles, activeCategory, searchQuery]);
 
-  // Generate Post & Context-Matched Image
-  const handleGeneratePost = async (targetArticle?: Article) => {
-    const articleToUse = targetArticle || selectedArticle;
-    const topicToUse = customTopic.trim() || articleToUse?.title;
+  // Filtered Repos based on Category & Search
+  const filteredRepos = useMemo(() => {
+    return repos.filter((r) => {
+      const matchesCategory = activeRepoCategory === 'All' || r.category === activeRepoCategory;
+      const q = repoSearchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        r.name.toLowerCase().includes(q) ||
+        r.fullName.toLowerCase().includes(q) ||
+        r.description.toLowerCase().includes(q) ||
+        r.whatItDoes.toLowerCase().includes(q) ||
+        r.language.toLowerCase().includes(q) ||
+        r.topics.some((t) => t.toLowerCase().includes(q));
+      return matchesCategory && matchesSearch;
+    });
+  }, [repos, activeRepoCategory, repoSearchQuery]);
 
-    if (!topicToUse) {
-      showStatus('error', 'Please select a news article below or type a custom topic.');
-      return;
+  // Generate Post & Context-Matched Image
+  const handleGeneratePost = async (targetItem?: Article | AgentRepo) => {
+    let topicToUse = '';
+    let summaryToUse = '';
+    let sourceUrlToUse = '';
+    let sourceNameToUse = '';
+    let postTypeToUse: 'news' | 'repo_spotlight' = 'news';
+    let repoDataToUse: AgentRepo | undefined;
+
+    const isTargetRepo = targetItem && 'repoUrl' in targetItem;
+    const isTargetArticle = targetItem && 'sourceName' in targetItem && !('repoUrl' in targetItem);
+
+    if (isTargetRepo || (!isTargetArticle && sourceMode === 'repos')) {
+      const repo = (isTargetRepo ? targetItem : selectedRepo) as AgentRepo | null;
+      if (!repo) {
+        showStatus('error', 'Please select an open-source AI agent repository below.');
+        return;
+      }
+      repoDataToUse = repo;
+      postTypeToUse = 'repo_spotlight';
+      topicToUse = repo.name;
+      summaryToUse = repo.whatItDoes || repo.description;
+      sourceUrlToUse = repo.repoUrl;
+      sourceNameToUse = `GitHub (${repo.fullName})`;
+    } else {
+      const articleToUse = (isTargetArticle ? targetItem : selectedArticle) as Article | null;
+      topicToUse = customTopic.trim() || articleToUse?.title || '';
+      if (!topicToUse) {
+        showStatus('error', 'Please select a news article below or type a custom topic.');
+        return;
+      }
+      summaryToUse = articleToUse?.summary || topicToUse;
+      sourceUrlToUse = articleToUse?.sourceUrl || '';
+      sourceNameToUse = articleToUse?.sourceName || 'Tech News';
+      postTypeToUse = 'news';
     }
 
     setIsGenerating(true);
     setGenerationProgress(15);
-    setGenerationStatusText('Harvesting research article insights & technical context...');
+    setGenerationStatusText(
+      postTypeToUse === 'repo_spotlight'
+        ? `Analyzing AI agent repository ${topicToUse} & technical capabilities...`
+        : 'Harvesting research article insights & technical context...'
+    );
 
     const progressTimer = setInterval(() => {
       setGenerationProgress((prev) => {
         if (prev < 35) {
-          setGenerationStatusText('Google Gemini (gemini-flash-latest) writing scroll-stopping hook & 4 takeaways...');
+          setGenerationStatusText(
+            postTypeToUse === 'repo_spotlight'
+              ? 'Google Gemini writing high-impact developer hook, superpowers, & setup guide...'
+              : 'Google Gemini (gemini-flash-latest) writing scroll-stopping hook & 4 takeaways...'
+          );
           return prev + 10;
         }
         if (prev < 70) {
-          setGenerationStatusText('Gemini Visual Director analyzing post lines to conceptualize matched imagery...');
+          setGenerationStatusText(
+            postTypeToUse === 'repo_spotlight'
+              ? 'Gemini Visual Director conceptualizing open-source tech architecture visual...'
+              : 'Gemini Visual Director analyzing post lines to conceptualize matched imagery...'
+          );
           return prev + 8;
         }
         if (prev < 92) {
@@ -253,12 +354,14 @@ export default function LinkedInStudioPage() {
         body: JSON.stringify({
           userId: currentUserId,
           topic: topicToUse,
-          summary: articleToUse?.summary || topicToUse,
-          sourceUrl: articleToUse?.sourceUrl || '',
-          sourceName: articleToUse?.sourceName || 'Tech News',
+          summary: summaryToUse,
+          sourceUrl: sourceUrlToUse,
+          sourceName: sourceNameToUse,
           tone,
           aiProvider,
           preferNewsImage,
+          postType: postTypeToUse,
+          repoData: repoDataToUse,
         }),
       });
 
@@ -280,7 +383,12 @@ export default function LinkedInStudioPage() {
           }
         }
 
-        showStatus('success', 'AI post & matched visual generated based on your selected story!');
+        showStatus(
+          'success',
+          postTypeToUse === 'repo_spotlight'
+            ? `AI spotlight post for ${topicToUse} generated with project usage guide & GitHub link!`
+            : 'AI post & matched visual generated based on your selected story!'
+        );
         loadPastPosts();
 
         // Scroll smoothly to studio workspace
@@ -492,7 +600,7 @@ export default function LinkedInStudioPage() {
                 </span>
               </h1>
               <p className="text-sm text-slate-500">
-                Live Tech & AI News Radar: browse real-time stories, select an article, and let Gemini craft an insight-dense post with an exact matched visual.
+                Trending AI Agent Repositories & Tech News Radar: browse open-source agent tools and live stories, then generate single-repo breakdowns or industry insights with Gemini.
               </p>
             </div>
           </div>
@@ -502,7 +610,7 @@ export default function LinkedInStudioPage() {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowTokenModal(true)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border shadow-sm ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border shadow-sm cursor-pointer ${
               isConnected
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
                 : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'
@@ -515,7 +623,7 @@ export default function LinkedInStudioPage() {
           {isConnected && (
             <button
               onClick={handleDisconnect}
-              className="px-3 py-2 rounded-xl bg-white hover:bg-red-50 hover:border-red-200 border border-slate-200 text-slate-500 hover:text-red-600 text-xs font-semibold transition-all shadow-sm"
+              className="px-3 py-2 rounded-xl bg-white hover:bg-red-50 hover:border-red-200 border border-slate-200 text-slate-500 hover:text-red-600 text-xs font-semibold transition-all shadow-sm cursor-pointer"
               title="Disconnect LinkedIn Account"
             >
               Disconnect
@@ -523,12 +631,18 @@ export default function LinkedInStudioPage() {
           )}
 
           <button
-            onClick={fetchNews}
-            disabled={isFetchingNews}
-            className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 shadow-sm"
+            onClick={() => (sourceMode === 'repos' ? fetchRepos(repoSearchQuery, repoSort, activeRepoCategory) : fetchNews())}
+            disabled={sourceMode === 'repos' ? isFetchingRepos : isFetchingNews}
+            className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 shadow-sm cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isFetchingNews ? 'animate-spin text-cyan-600' : ''}`} />
-            Refresh News
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${
+                (sourceMode === 'repos' ? isFetchingRepos : isFetchingNews)
+                  ? 'animate-spin text-blue-600'
+                  : ''
+              }`}
+            />
+            {sourceMode === 'repos' ? 'Refresh Repos' : 'Refresh News'}
           </button>
         </div>
       </div>
@@ -561,220 +675,573 @@ export default function LinkedInStudioPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 1: RICH NEWS EXPLORER & STORY SELECTION */}
+      {/* STEP 1: DISCOVERY & SELECTION (AI AGENT REPOS OR LIVE NEWS) */}
       {/* ========================================================================= */}
       <section className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-cyan-50 text-cyan-700 font-black text-xs flex items-center justify-center border border-cyan-200">
-                1
+        {/* Source Mode Switcher (AI Agent Repos vs Tech & AI News Radar) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200">
+            <button
+              onClick={() => setSourceMode('repos')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                sourceMode === 'repos'
+                  ? 'bg-white text-blue-700 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <FolderGit2 className="w-3.5 h-3.5 text-blue-600" />
+              <span>🚀 Cool AI Agent Repos</span>
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-extrabold border border-blue-200">
+                ⭐ {repos.length} Repos
               </span>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-                <Newspaper className="w-4 h-4 text-cyan-600" />
-                Live Tech & AI News Feed
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
-                  LIVE STORIES ({filteredArticles.length})
-                </span>
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Live breaking news gathered from Google News RSS, Hacker News, and AI Research. Pick any live story below to draft your LinkedIn post.
-            </p>
+            </button>
+
+            <button
+              onClick={() => setSourceMode('news')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                sourceMode === 'news'
+                  ? 'bg-white text-cyan-700 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Newspaper className="w-3.5 h-3.5 text-cyan-600" />
+              <span>⚡ Tech & AI News Radar</span>
+              <span className="px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 text-[10px] font-bold border border-cyan-200">
+                {articles.length} Stories
+              </span>
+            </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Filter stories by keyword..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white"
-            />
+          <div className="text-xs text-slate-500 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>
+              {sourceMode === 'repos'
+                ? 'Spotlight open-source AI agents that help developers build faster'
+                : 'Curated breaking news from Google RSS, Hacker News, & ArXiv'}
+            </span>
           </div>
         </div>
 
-        {/* Category Filter Tabs */}
-        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
-          {[
-            { name: 'All', icon: Layers },
-            { name: 'AI & LLMs', icon: Cpu },
-            { name: 'Research & Science', icon: Microscope },
-            { name: 'Open Source & Dev', icon: Code2 },
-            { name: 'Tech Industry', icon: Building2 },
-          ].map((cat) => {
-            const Icon = cat.icon;
-            const isActive = activeCategory === cat.name;
-            const count =
-              cat.name === 'All'
-                ? articles.length
-                : articles.filter((a) => a.category === cat.name).length;
-            return (
-              <button
-                key={cat.name}
-                onClick={() => setActiveCategory(cat.name)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm font-bold'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{cat.name}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* News Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[460px] overflow-y-auto pr-1">
-          {filteredArticles.map((art) => {
-            const isSelected = selectedArticle?.id === art.id;
-            return (
-              <div
-                key={art.id}
-                onClick={() => {
-                  setSelectedArticle(art);
-                  setCustomTopic('');
-                }}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
-                  isSelected
-                    ? 'bg-blue-50/70 border-cyan-500 shadow-sm ring-1 ring-cyan-500/50'
-                    : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 shadow-sm'
-                }`}
-              >
-                <div>
-                  {/* Category & Source Badges */}
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-cyan-700 truncate max-w-[120px]">
-                      {art.sourceName}
+        {sourceMode === 'repos' ? (
+          <div className="space-y-5">
+            {/* Header & Search Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200">
+                    1
+                  </span>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                    <FolderGit2 className="w-4 h-4 text-blue-600" />
+                    Cool & Trending Open-Source AI Agent Repos
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      {filteredRepos.length} AGENTS AVAILABLE
                     </span>
-                    <span className="text-[10px] text-slate-400 shrink-0">
-                      {art.category}
-                    </span>
-                  </div>
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Discover newest agent frameworks, coding assistants, and browser automation agents that make developer work easy. Select any repo below to generate a single-repo breakdown explaining what it does, how to use it, and providing the GitHub link.
+                </p>
+              </div>
 
-                  {/* Headline */}
-                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-cyan-700 line-clamp-2 leading-relaxed">
-                    {art.title}
-                  </h3>
-
-                  {/* Full Summary */}
-                  <p className="text-[11px] text-slate-500 mt-2 line-clamp-3 leading-relaxed">
-                    {art.summary}
-                  </p>
+              {/* Search Bar & Sort Toggle */}
+              <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search repos, tools, topics..."
+                    value={repoSearchQuery}
+                    onChange={(e) => setRepoSearchQuery(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white"
+                  />
                 </div>
 
-                {/* Card Footer Actions */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <a
-                    href={art.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] text-slate-400 hover:text-cyan-600 flex items-center gap-1"
-                  >
-                    Read article <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
-
+                <div className="inline-flex p-1 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedArticle(art);
-                      handleGeneratePost(art);
+                    onClick={() => {
+                      setRepoSort('trending');
+                      fetchRepos(repoSearchQuery, 'trending', activeRepoCategory);
                     }}
-                    className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-cyan-500 text-white shadow-sm'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      repoSort === 'trending'
+                        ? 'bg-white text-blue-700 shadow-sm font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    {isSelected ? (
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    <span>Trending Stars</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRepoSort('newest');
+                      fetchRepos(repoSearchQuery, 'newest', activeRepoCategory);
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      repoSort === 'newest'
+                        ? 'bg-white text-blue-700 shadow-sm font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Zap className="w-3 h-3 text-cyan-600" />
+                    <span>Newest Updated</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => fetchRepos(repoSearchQuery, repoSort, activeRepoCategory)}
+                  disabled={isFetchingRepos}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
+                  title="Query GitHub live"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetchingRepos ? 'animate-spin text-blue-600' : ''}`} />
+                  <span className="hidden sm:inline">Live Scan</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Category Filter Tabs */}
+            <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+              {[
+                { name: 'All', icon: Layers },
+                { name: 'Coding & Dev Tools', icon: Terminal },
+                { name: 'Automation & Browsing', icon: Globe },
+                { name: 'Multi-Agent Frameworks', icon: Cpu },
+                { name: 'Memory & Context', icon: Sparkles },
+                { name: 'Workflow & Productivity', icon: Zap },
+              ].map((cat) => {
+                const Icon = cat.icon;
+                const isActive = activeRepoCategory === cat.name;
+                const count =
+                  cat.name === 'All'
+                    ? repos.length
+                    : repos.filter((r) => r.category === cat.name).length;
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => {
+                      setActiveRepoCategory(cat.name);
+                      fetchRepos(repoSearchQuery, repoSort, cat.name);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm font-bold'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{cat.name}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Repos Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-1">
+              {filteredRepos.map((repo) => {
+                const isSelected = selectedRepo?.id === repo.id;
+                return (
+                  <div
+                    key={repo.id}
+                    onClick={() => setSelectedRepo(repo)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
+                      isSelected
+                        ? 'bg-blue-50/70 border-blue-500 shadow-sm ring-1 ring-blue-500/50'
+                        : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    <div className="space-y-2.5">
+                      {/* Top Row: Language & Star Count */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-blue-700 truncate max-w-[140px] flex items-center gap-1">
+                            <FolderGit2 className="w-3 h-3 text-blue-600 shrink-0" />
+                            {repo.name}
+                          </span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                            {repo.language}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                            <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
+                            {repo.stars ? repo.stars.toLocaleString() : 'Trending'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Full Name */}
+                      <h3 className="text-xs font-bold text-slate-900 group-hover:text-blue-700 line-clamp-1">
+                        {repo.fullName}
+                      </h3>
+
+                      {/* What it Does */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                          💡 What it does:
+                        </span>
+                        <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                          {repo.whatItDoes || repo.description}
+                        </p>
+                      </div>
+
+                      {/* Key Capabilities Pills */}
+                      {Array.isArray(repo.whatItCanDo) && repo.whatItCanDo.length > 0 && (
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                            ⚡ Superpowers:
+                          </span>
+                          <div className="flex flex-col gap-1">
+                            {repo.whatItCanDo.slice(0, 2).map((cap, idx) => (
+                              <div key={idx} className="text-[10px] text-slate-600 flex items-start gap-1 line-clamp-1">
+                                <span className="text-blue-500 font-bold shrink-0">•</span>
+                                <span className="truncate">{cap}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* How to use snippet preview */}
+                      {repo.howToUse && (
+                        <div className="p-2 rounded-xl bg-slate-900 text-slate-200 font-mono text-[10px] truncate">
+                          <code>{repo.howToUse.split('\n')[0] || repo.howToUse.slice(0, 45)}</code>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <a
+                        href={repo.repoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[10px] text-slate-500 hover:text-blue-600 flex items-center gap-1 font-semibold"
+                      >
+                        GitHub Repo <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRepo(repo);
+                          handleGeneratePost(repo);
+                        }}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {isSelected ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Selected
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="w-3 h-3 text-blue-600" /> Draft Post
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Selected Repo Action Bar */}
+            {selectedRepo && (
+              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800">
+                      Ready to draft LinkedIn post for AI Agent:
+                    </span>
+                    <p className="text-xs font-bold text-slate-900 truncate max-w-xl flex items-center gap-1.5">
+                      <span>{selectedRepo.name}</span>
+                      <span className="text-[10px] font-normal text-slate-500 font-mono">({selectedRepo.fullName})</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate flex items-center gap-2">
+                      <span>⭐ {selectedRepo.stars ? selectedRepo.stars.toLocaleString() : 'Trending'} Stars</span>
+                      <span>•</span>
+                      <span>{selectedRepo.language}</span>
+                      <span>•</span>
+                      <span>{selectedRepo.category}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Controls & Generate CTA */}
+                <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0">
+                  <select
+                    value={tone}
+                    onChange={(e: any) => setTone(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
+                  >
+                    <option value="thought-leader">Thought Leader Tone</option>
+                    <option value="technical">Deep Technical Tone</option>
+                    <option value="conversational">Conversational Tone</option>
+                  </select>
+
+                  <select
+                    value={aiProvider}
+                    onChange={(e: any) => setAiProvider(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
+                  >
+                    <option value="gemini">Google Gemini (gemini-flash-latest)</option>
+                    <option value="groq">Groq (groq/compound)</option>
+                    <option value="claude">Claude (Haiku 4.5)</option>
+                  </select>
+
+                  <button
+                    onClick={() => handleGeneratePost(selectedRepo)}
+                    disabled={isGenerating}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 cursor-pointer shrink-0"
+                  >
+                    {isGenerating ? (
                       <>
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Selected
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        Analyzing Repo & Crafting Post...
                       </>
                     ) : (
                       <>
-                        <Wand2 className="w-3 h-3 text-cyan-600" /> Draft Post
+                        <Sparkles className="w-4 h-4 text-blue-200" />
+                        Generate Repo Spotlight Post & Visual
                       </>
                     )}
                   </button>
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Selected Story Action Bar */}
-        {selectedArticle && (
-          <div className="p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
+            )}
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {/* News Header & Search Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-cyan-50 text-cyan-700 font-black text-xs flex items-center justify-center border border-cyan-200">
+                    1
+                  </span>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                    <Newspaper className="w-4 h-4 text-cyan-600" />
+                    Live Tech & AI News Feed
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                      LIVE STORIES ({filteredArticles.length})
+                    </span>
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Live breaking news gathered from Google News RSS, Hacker News, and AI Research. Pick any live story below to draft your LinkedIn post.
+                </p>
               </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-800">
-                  Ready to draft post for:
-                </span>
-                <p className="text-xs font-bold text-slate-900 truncate max-w-xl">
-                  {selectedArticle.title}
-                </p>
-                <p className="text-[11px] text-slate-500 truncate">
-                  Source: {selectedArticle.sourceName} • {selectedArticle.category}
-                </p>
+
+              {/* Search Bar */}
+              <div className="relative w-full md:w-80">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter stories by keyword..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white"
+                />
               </div>
             </div>
 
-            {/* Controls & Generate CTA */}
-            <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0">
-              <select
-                value={tone}
-                onChange={(e: any) => setTone(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
-              >
-                <option value="thought-leader">Thought Leader Tone</option>
-                <option value="technical">Deep Technical Tone</option>
-                <option value="conversational">Conversational Tone</option>
-              </select>
-
-              <select
-                value={aiProvider}
-                onChange={(e: any) => setAiProvider(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
-              >
-                <option value="gemini">Google Gemini (gemini-flash-latest)</option>
-                <option value="groq">Groq (groq/compound)</option>
-                <option value="claude">Claude (Haiku 4.5)</option>
-              </select>
-
-              <button
-                onClick={() => handleGeneratePost()}
-                disabled={isGenerating}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-600/20 disabled:opacity-50 cursor-pointer shrink-0"
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    Analyzing Story & Crafting Post...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-cyan-200" />
-                    Generate Post & Matched Visual
-                  </>
-                )}
-              </button>
+            {/* Category Filter Tabs */}
+            <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+              {[
+                { name: 'All', icon: Layers },
+                { name: 'AI & LLMs', icon: Cpu },
+                { name: 'Research & Science', icon: Microscope },
+                { name: 'Open Source & Dev', icon: Code2 },
+                { name: 'Tech Industry', icon: Building2 },
+              ].map((cat) => {
+                const Icon = cat.icon;
+                const isActive = activeCategory === cat.name;
+                const count =
+                  cat.name === 'All'
+                    ? articles.length
+                    : articles.filter((a) => a.category === cat.name).length;
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setActiveCategory(cat.name)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm font-bold'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{cat.name}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* News Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[460px] overflow-y-auto pr-1">
+              {filteredArticles.map((art) => {
+                const isSelected = selectedArticle?.id === art.id;
+                return (
+                  <div
+                    key={art.id}
+                    onClick={() => {
+                      setSelectedArticle(art);
+                      setCustomTopic('');
+                    }}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
+                      isSelected
+                        ? 'bg-blue-50/70 border-cyan-500 shadow-sm ring-1 ring-cyan-500/50'
+                        : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    <div>
+                      {/* Category & Source Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-2.5">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-cyan-700 truncate max-w-[120px]">
+                          {art.sourceName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 shrink-0">
+                          {art.category}
+                        </span>
+                      </div>
+
+                      {/* Headline */}
+                      <h3 className="text-xs font-bold text-slate-900 group-hover:text-cyan-700 line-clamp-2 leading-relaxed">
+                        {art.title}
+                      </h3>
+
+                      {/* Full Summary */}
+                      <p className="text-[11px] text-slate-500 mt-2 line-clamp-3 leading-relaxed">
+                        {art.summary}
+                      </p>
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <a
+                        href={art.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[10px] text-slate-400 hover:text-cyan-600 flex items-center gap-1"
+                      >
+                        Read article <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedArticle(art);
+                          handleGeneratePost(art);
+                        }}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? 'bg-cyan-500 text-white shadow-sm'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {isSelected ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Selected
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="w-3 h-3 text-cyan-600" /> Draft Post
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Selected Story Action Bar */}
+            {selectedArticle && (
+              <div className="p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-800">
+                      Ready to draft post for:
+                    </span>
+                    <p className="text-xs font-bold text-slate-900 truncate max-w-xl">
+                      {selectedArticle.title}
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      Source: {selectedArticle.sourceName} • {selectedArticle.category}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Controls & Generate CTA */}
+                <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0">
+                  <select
+                    value={tone}
+                    onChange={(e: any) => setTone(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
+                  >
+                    <option value="thought-leader">Thought Leader Tone</option>
+                    <option value="technical">Deep Technical Tone</option>
+                    <option value="conversational">Conversational Tone</option>
+                  </select>
+
+                  <select
+                    value={aiProvider}
+                    onChange={(e: any) => setAiProvider(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none"
+                  >
+                    <option value="gemini">Google Gemini (gemini-flash-latest)</option>
+                    <option value="groq">Groq (groq/compound)</option>
+                    <option value="claude">Claude (Haiku 4.5)</option>
+                  </select>
+
+                  <button
+                    onClick={() => handleGeneratePost()}
+                    disabled={isGenerating}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-600/20 disabled:opacity-50 cursor-pointer shrink-0"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        Analyzing Story & Crafting Post...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-cyan-200" />
+                        Generate Post & Matched Visual
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

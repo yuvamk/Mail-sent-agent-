@@ -39,27 +39,36 @@ export async function POST(req: NextRequest) {
       aiProvider = 'gemini',
       customImageUrl,
       preferNewsImage = false,
+      postType = 'news',
+      repoData,
     } = body;
 
-    if (!topic) {
+    if (!topic && !repoData?.name) {
       return NextResponse.json(
-        { success: false, error: 'Topic is required' },
+        { success: false, error: 'Topic or Repository is required' },
         { status: 400 }
       );
     }
+
+    const effectiveTopic = repoData?.name ? `AI Agent Spotlight: ${repoData.name} (${repoData.fullName || repoData.name})` : topic;
+    const effectiveSourceName = repoData ? 'GitHub Open Source' : (sourceName || 'Tech News');
+    const effectiveSourceUrl = repoData?.repoUrl || sourceUrl || '';
+    const effectiveSummary = repoData?.whatItDoes || repoData?.description || summary || topic;
 
     const creds = await getUserCredentials(userId);
 
     // 1. Generate LinkedIn Post with AI
     const generated = await generateLinkedInPost(
       {
-        topic,
-        summary,
-        sourceUrl,
-        sourceName,
+        topic: effectiveTopic,
+        summary: effectiveSummary,
+        sourceUrl: effectiveSourceUrl,
+        sourceName: effectiveSourceName,
         tone,
         aiProvider,
-        authorName: creds.candidateName || 'Tech Innovator',
+        authorName: creds.candidateName || 'AI Builder',
+        postType,
+        repoData,
       },
       creds
     );
@@ -95,10 +104,10 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient();
     const newPostData = {
       user_id: userId,
-      topic,
-      source_url: sourceUrl || null,
-      source_title: summary || topic,
-      source_name: sourceName || 'Tech News',
+      topic: effectiveTopic,
+      source_url: effectiveSourceUrl || null,
+      source_title: effectiveSummary || effectiveTopic,
+      source_name: effectiveSourceName,
       post_content: generated.postContent,
       image_url: imageUrl,
       image_source: imageSource,
